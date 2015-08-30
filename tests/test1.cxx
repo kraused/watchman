@@ -4,17 +4,34 @@
 #include "compiler.hxx"
 #include "error.hxx"
 
-class Test1_Child : Child
+class Test1_Child : public Child
 {
 
+public:
+	int		execute();
+
 };
+
+int Test1_Child::execute()
+{
+	return 0;
+}
+
+static Watchman_Plugin plu;
+static Test1_Child     proc;
 
 int _init(Watchman *w)
 {
-	return -1;
-};
+	int err;
 
-static Watchman_Plugin plu;
+	err = w->add_child(&proc);
+	if (unlikely(err)) {
+		WATCHMAN_ERROR("Failed to add children to list: %d", err);
+		return err;
+	}
+
+	return 0;
+};
 
 extern "C" Watchman_Plugin *entry()
 {

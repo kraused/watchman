@@ -3,7 +3,7 @@ CXX      = g++
 CPPFLAGS = -I.
 CXXFLAGS = -fno-exceptions -fno-rtti -fPIC -Wall
 LD       = g++
-LDFLAGS  = -fno-exceptions -fno-rtti -fPIC
+LDFLAGS  = -fno-exceptions -fno-rtti -fPIC -Wl,-export-dynamic
 LIBS     = -ldl
 
 TESTS = tests/test1.so
@@ -13,7 +13,7 @@ default: all
 all: watchman.exe $(TESTS)
 
 watchman.exe: main.o watchman.o child.o initfini.o error.o
-	$(LD) $(LFLAGS) -o $@ $^ $(LIBS)
+	$(LD) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 main.o: main.cxx
 	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ -c $<
