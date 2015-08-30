@@ -2,6 +2,7 @@
 #include "compiler.hxx"
 #include "watchman.hxx"
 #include "initfini.hxx"
+#include "error.hxx"
 
 int main(int argc, char **argv)
 {
@@ -9,8 +10,10 @@ int main(int argc, char **argv)
 	int err;
 
 	err = initialize(&w, argv[1]);
-	if (unlikely(err))
+	if (unlikely(err)) {
+		WATCHMAN_ERROR("initialize() failed with exit code %d", err);
 		return err;
+	}
 
 	err = w.loop();
 	if (unlikely(err)) {
@@ -18,6 +21,11 @@ int main(int argc, char **argv)
 		return err;
 	}
 
-	return finalize(&w);
+	err = finalize(&w);
+	if (unlikely(err)) {
+		WATCHMAN_ERROR("finalize() failed with exit code %d", err);
+	}
+
+	return err;
 }
 
