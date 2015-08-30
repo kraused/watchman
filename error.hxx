@@ -20,7 +20,7 @@ private:
 					 * and functions should not be static.
 					 */
 
-	static void	_report(const char* prefix, const char* file, const char* func, long line, 
+	static void	_report(const char* prefix, const char* file, const char* func, long line,
 			        const char* fmt, va_list vl);
 };
 

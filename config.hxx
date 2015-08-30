@@ -7,7 +7,7 @@
 #undef  WATCHMAN_MAX_CHILDREN
 #define WATCHMAN_MAX_CHILDREN 	1
 
-/* Maximal number of poll() failures in a row that will be 
+/* Maximal number of poll() failures in a row that will be
  * tolerated.
  */
 #undef  WATCHMAN_MAX_POLL_FAILS
@@ -23,7 +23,7 @@
  * two times this value.
  */
 #undef	WATCHMAN_ALARM_SECS
-#define	WATCHMAN_ALARM_SECS	1	
+#define	WATCHMAN_ALARM_SECS	1
 
 #endif
 
