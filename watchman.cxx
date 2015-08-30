@@ -22,7 +22,7 @@ Watchman::~Watchman()
 	/* Check that everything is nicely cleaned-up
 	 */
 }
-	
+
 int Watchman::init_signal_handling()
 {
 	sigset_t all;
@@ -82,7 +82,7 @@ int Watchman::loop()
 
 	return -1;
 }
-	
+
 void Watchman::_fill_poll_fds()
 {
 	memset(_pfds, 0, 1*sizeof(struct pollfd));
@@ -136,7 +136,7 @@ int Watchman::_num_children_left() const
 
 	return n;
 }
-	
+
 int Watchman::_find_child_by_pid(long long pid) const
 {
 	int i, j;
@@ -235,5 +235,18 @@ int Watchman::_handle_children()
 int Watchman::_handle_child(int i)
 {
 	return 0;
+}
+
+int Watchman::add_child(Child *child)
+{
+	int i;
+
+	for (i = 0; i < WATCHMAN_MAX_CHILDREN; ++i)
+		if (NULL == _children[i]) {
+			_children[i] = child;
+			return 0;
+		}
+
+	return -ENOMEM;
 }
 

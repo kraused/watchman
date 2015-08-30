@@ -46,6 +46,11 @@ private:
 	int		_handle_children();
 	int		_handle_child(int i);
 
+public:
+			/* Add a new children to the list.
+			 */
+	int		add_child(Child *child);
+
 private:
 #undef	WATCHMAN_MAX_POLLFDS
 #define	WATCHMAN_MAX_POLLFDS	(1 + 2*WATCHMAN_MAX_CHILDREN)
@@ -60,7 +65,7 @@ private:
 
 };
 
-enum 
+enum
 {
 	WATCHMAN_EXIT_PHASE_CONT = 0,
 	WATCHMAN_EXIT_PHASE_BEGIN,
