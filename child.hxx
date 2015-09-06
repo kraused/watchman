@@ -6,6 +6,9 @@ class Child
 {
 
 public:
+				explicit Child();
+
+public:
 	virtual int		execute() = 0;
 
 public:
@@ -14,17 +17,22 @@ public:
 				 */
 	inline long long	pid() const;
 
+	inline int		stdout_fileno() const;
+	inline int		stderr_fileno() const;
+
 public:
 				/* Soft termination request. On Linux this
 				 * is implemented via SIGTERM.
 				 */
-	int			terminate();
+	virtual int		terminate();
 				/* Hard termination.
 				 */
-	int			kill();
-
+	virtual int		kill();
 
 private:
+	int			_send_signal_to_child(int signum);
+
+protected:
 	long long		_pid;
 	int			_fd_o;
 	int			_fd_e;
@@ -33,6 +41,16 @@ private:
 inline long long Child::pid() const
 {
 	return _pid;
+}
+
+inline int Child::stdout_fileno() const
+{
+	return _fd_o;
+}
+
+inline int Child::stderr_fileno() const
+{
+	return _fd_e;
 }
 
 #endif
