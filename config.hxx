@@ -25,5 +25,17 @@
 #undef	WATCHMAN_ALARM_SECS
 #define	WATCHMAN_ALARM_SECS	1
 
+/* Maximal string length in the argument list of a program (including
+ * the path to to the program itself)
+ */
+#undef  WATCHMAN_PROGRAM_MAX_ARGV_STRLEN
+#define WATCHMAN_PROGRAM_MAX_ARGV_STRLEN	128
+
+/* Maximal number of arguments for a program (including the path
+ * to the program)
+ */
+#undef	WATCHMAN_PROGRAM_MAX_ARGC
+#define WATCHMAN_PROGRAM_MAX_ARGC	16
+
 #endif
 
