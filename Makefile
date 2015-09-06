@@ -6,13 +6,13 @@ LD       = g++
 LDFLAGS  = -fno-exceptions -fno-rtti -fPIC -Wl,-export-dynamic
 LIBS     = -ldl
 
-TESTS = tests/test1.so
+TESTS = tests/test1.so tests/test2.so
 
 default: all
 
 all: watchman.exe $(TESTS)
 
-watchman.exe: main.o watchman.o child.o initfini.o error.o
+watchman.exe: main.o watchman.o child.o program.o initfini.o error.o
 	$(LD) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 main.o: main.cxx
