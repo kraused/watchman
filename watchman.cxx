@@ -1,4 +1,5 @@
 
+#include <stdio.h>
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
@@ -51,6 +52,35 @@ int Watchman::fini_signal_handling()
 	return 0;
 }
 
+int Watchman::execute_children()
+{
+	int i, err, fails;
+
+	if (unlikely(0 == _num_children_left())) {
+		WATCHMAN_ERROR("No children in list");
+		return -1;
+	}
+
+	fails = 0;
+	for (i = 0; i < WATCHMAN_MAX_CHILDREN; ++i) {
+		if (NULL == _children[i])
+			continue;
+
+		err = _children[i]->execute();
+		if (unlikely(err)) {
+			WATCHMAN_ERROR("Failed to execute() child number %d", i);
+			++fails;
+		}
+	}
+
+	if (unlikely(fails == _num_children_left()))
+		return -1;
+
+	/* Continue as long as at least one children executed succesfully.
+	 */
+	return 0;
+}
+
 int Watchman::loop()
 {
 	int err;
@@ -85,10 +115,27 @@ int Watchman::loop()
 
 void Watchman::_fill_poll_fds()
 {
-	memset(_pfds, 0, 1*sizeof(struct pollfd));
+	int i, j;
+
+	memset(_pfds, 0, sizeof(_pfds));
 
 	_pfds[0].fd     = _sfd;
 	_pfds[0].events = POLLIN;
+
+	for (i = 0, j = 0; i < WATCHMAN_MAX_CHILDREN; ++i) {
+		if (NULL == _children[i])
+			continue;
+
+		_pfds[1 + 2*j].fd     = _children[i]->stdout_fileno();
+		_pfds[1 + 2*j].events = POLLIN;
+
+		_pfds[2 + 2*j].fd     = _children[i]->stderr_fileno();
+		_pfds[2 + 2*j].events = POLLIN;
+
+		++j;
+	}
+
+	_num_pfds = 1 + 2*_num_children_left();
 }
 
 int Watchman::_poll()
@@ -97,7 +144,7 @@ int Watchman::_poll()
 
 	_fill_poll_fds();
 
-	err = poll(_pfds, 1, WATCHMAN_POLL_TIMEOUT);
+	err = poll(_pfds, _num_pfds, WATCHMAN_POLL_TIMEOUT);
 	if (unlikely(err < 0)) {
 		WATCHMAN_ERROR("poll failed: %s", errno);
 		return -errno;
@@ -111,6 +158,8 @@ int Watchman::_recv_and_handle_signal()
 	struct signalfd_siginfo info;
 
 	read(_sfd, &info, sizeof(info));	/* FIXME Error handling. */
+
+	WATCHMAN_DEBUG("Received signal %d", info.ssi_signo);
 
 	if (SIGALRM == info.ssi_signo)
 		return _handle_sigalrm();
@@ -162,6 +211,14 @@ int Watchman::_handle_sigchld(long long pid)
 
 	/* FIXME Read remaining bytes from the children stdin/stdout if possible
 	 */
+	{
+		char line[128];
+
+		memset(line, 0, sizeof(line));
+		read(_children[i]->stdout_fileno(), line, 127);
+
+		fprintf(stdout, "%s", line);
+	}
 
 	/* FIXME Cleanup
 	 */
@@ -234,6 +291,21 @@ int Watchman::_handle_children()
 
 int Watchman::_handle_child(int i)
 {
+	char line[128];		/* FIXME */
+
+	if (_pfds[1 + 2*i].revents & POLLIN) {
+		memset(line, 0, sizeof(line));
+		read(_children[i]->stdout_fileno(), line, 127);
+
+		fprintf(stdout, "%s", line);
+	}
+	if (_pfds[2 + 2*i].revents & POLLIN) {
+		memset(line, 0, sizeof(line));
+		read(_children[i]->stderr_fileno(), line, 127);
+
+		fprintf(stderr, "%s", line);
+	}
+
 	return 0;
 }
 

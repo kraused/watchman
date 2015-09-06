@@ -30,6 +30,10 @@ public:
 	int		init_signal_handling();
 	int		fini_signal_handling();
 
+			/* Call execute() for all children.
+			 */
+	int		execute_children();
+
 private:
 	int		_recv_and_handle_signal();
 
@@ -55,6 +59,7 @@ private:
 #undef	WATCHMAN_MAX_POLLFDS
 #define	WATCHMAN_MAX_POLLFDS	(1 + 2*WATCHMAN_MAX_CHILDREN)
 
+	int		_num_pfds;
 	struct pollfd	_pfds[WATCHMAN_MAX_POLLFDS];
 
 	void		_fill_poll_fds();

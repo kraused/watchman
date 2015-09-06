@@ -58,7 +58,15 @@ int initialize(Watchman *w, const char *plugin)
 	if (unlikely(err))
 		return err;
 
-	return _load_plugin(w, plugin);
+	err = _load_plugin(w, plugin);
+	if (unlikely(err))
+		return err;
+
+	err = w->execute_children();
+	if (unlikely(err))
+		return err;
+
+	return 0;
 }
 
 int finalize  (Watchman *w)
