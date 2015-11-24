@@ -1,7 +1,9 @@
 
+#include <stdio.h>
 #include <signal.h>
 #include <string.h>
 #include <errno.h>
+#include <sys/wait.h>
 
 #include "child.hxx"
 #include "compiler.hxx"
@@ -20,6 +22,22 @@ int Child::terminate()
 int Child::kill()
 {
 	return _send_signal_to_child(SIGKILL);
+}
+
+int Child::wait()
+{
+	int       status;
+	long long x;
+
+	x = ::waitpid(_pid, &status, 0);
+
+	/* FIXME Evaluate status and handle errors returned by
+	 *       wait()
+	 */
+
+	fprintf(stderr, "wait(): %d\n", status);
+
+	return x;
 }
 
 int Child::_send_signal_to_child(int signum)

@@ -30,6 +30,9 @@ public:
 				/* Hard termination.
 				 */
 	virtual int		kill();
+				/* waitpid() wrapper.
+				 */
+	virtual int		wait();
 
 private:
 	int			_send_signal_to_child(int signum);

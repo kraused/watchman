@@ -17,8 +17,12 @@ Watchman::Watchman()
 {
 	int i;
 
-	for (i = 0; i < WATCHMAN_MAX_CHILDREN; ++i)
-		_children[i] = NULL;
+	for (i = 0; i < WATCHMAN_MAX_CHILDREN; ++i) {
+		_children[i].child  = NULL;
+		_children[i].flags  = 0;
+		_children[i].buffer = NULL;
+		_children[i].fp     = NULL;
+	}
 }
 
 Watchman::~Watchman()
@@ -66,14 +70,16 @@ int Watchman::execute_children()
 
 	fails = 0;
 	for (i = 0; i < WATCHMAN_MAX_CHILDREN; ++i) {
-		if (NULL == _children[i])
+		if (NULL == _children[i].child)
 			continue;
 
-		err = _children[i]->execute();
+		err = _children[i].child->execute();
 		if (unlikely(err)) {
 			WATCHMAN_ERROR("Failed to execute() child number %d", i);
 			++fails;
 		}
+
+		_children[i].flags = WATCHMAN_CHILD_ALIVE;
 	}
 
 	if (unlikely(fails == _num_children_left()))
@@ -126,22 +132,22 @@ void Watchman::_fill_poll_fds()
 	_pfds[0].events = POLLIN;
 
 	for (i = 0, j = 0; i < WATCHMAN_MAX_CHILDREN; ++i) {
-		if (NULL == _children[i])
+		if (NULL == _children[i].child)
 			continue;
 
-		_pfds[1 + 4*j].fd     = _children[i]->stdout_fileno();
+		_pfds[1 + 4*j].fd     = _children[i].child->stdout_fileno();
 		_pfds[1 + 4*j].events = POLLIN;
 
-		_pfds[2 + 4*j].fd     = _children[i]->stderr_fileno();
+		_pfds[2 + 4*j].fd     = _children[i].child->stderr_fileno();
 		_pfds[2 + 4*j].events = POLLIN;
 
-		if (_buffers[i]->stdout_pending()) {
-			_pfds[3 + 4*j].fd     = _fps[i]->stdout_fileno();
+		if (_children[i].buffer->stdout_pending()) {
+			_pfds[3 + 4*j].fd     = _children[i].fp->stdout_fileno();
 			_pfds[3 + 4*j].events = POLLOUT;
 		}
 
-		if (_buffers[i]->stderr_pending()) {
-			_pfds[4 + 4*j].fd     = _fps[i]->stderr_fileno();
+		if (_children[i].buffer->stderr_pending()) {
+			_pfds[4 + 4*j].fd     = _children[i].fp->stderr_fileno();
 			_pfds[4 + 4*j].events = POLLOUT;
 		}
 
@@ -194,7 +200,7 @@ int Watchman::_num_children_left() const
 
 	n = 0;
 	for (i = 0; i < WATCHMAN_MAX_CHILDREN; ++i)
-		n += (NULL != _children[i]);
+		n += (NULL != _children[i].child);
 
 	return n;
 }
@@ -204,7 +210,7 @@ int Watchman::_find_child_by_pid(long long pid) const
 	int i, j;
 
 	for (i = 0, j = -1; i < WATCHMAN_MAX_CHILDREN; ++i)
-		if (_children[i] && (pid == _children[i]->pid())) {
+		if (_children[i].child && (pid == _children[i].child->pid())) {
 			j = i;
 			break;
 		}
@@ -222,19 +228,24 @@ int Watchman::_handle_sigchld(long long pid)
 		return -1;
 	}
 
-	/* FIXME Handle errors
+	/* Keep the child structure alive so that remaining data in the buffers can
+	 * be flushed.
 	 */
+	_children[i].flags = WATCHMAN_CHILD_FINISHED;
 
-	_buffers[i]->read_from_stdout(_children[i]->stdout_fileno());
-	_buffers[i]->flush_stdout(_fps[i]->stdout_fileno());
-
-	_buffers[i]->read_from_stderr(_children[i]->stderr_fileno());
-	_buffers[i]->flush_stderr(_fps[i]->stderr_fileno());
-
-	/* FIXME Cleanup
-	 */
-
-	_children[i] = NULL;
+//	/* FIXME Handle errors
+//	 */
+//
+//	_children[i].buffer->read_from_stdout(_children[i]->stdout_fileno());
+//	_children[i].buffer->flush_stdout(_children[i].fp->stdout_fileno());
+//
+//	_children[i].buffer->read_from_stderr(_children[i]->stderr_fileno());
+//	_children[i].buffer->flush_stderr(_children[i].fp->stderr_fileno());
+//
+//	/* FIXME Cleanup
+//	 */
+//
+//	_children[i] = NULL;
 
 	return 0;
 }
@@ -249,9 +260,9 @@ int Watchman::_handle_sigquit(int signo)
 	}
 
 	for (i = 0; i < WATCHMAN_MAX_CHILDREN; ++i)
-		if (_children[i]) {
-			WATCHMAN_LOG("Terminating child process %d", _children[i]->pid());
-			_children[i]->terminate();
+		if (_children[i].child && (WATCHMAN_CHILD_ALIVE == _children[i].flags)) {
+			WATCHMAN_LOG("Terminating child process %d", _children[i].child->pid());
+			_children[i].child->terminate();
 		}
 
 	/* TODO Use a timerfd instead.
@@ -272,9 +283,9 @@ int Watchman::_handle_sigalrm()
 		 * been terminated but are not yet apparently. Try to kill them hard.
 		 */
 		for (i = 0; i < WATCHMAN_MAX_CHILDREN; ++i) {
-			if (_children[i]) {
-				WATCHMAN_LOG("Killing process %d", _children[i]->pid());
-				_children[i]->kill();
+			if (_children[i].child && (WATCHMAN_CHILD_ALIVE == _children[i].flags)) {
+				WATCHMAN_LOG("Killing process %d", _children[i].child->pid());
+				_children[i].child->kill();
 			}
 		}
 
@@ -296,7 +307,7 @@ int Watchman::_handle_children()
 	int i;
 
 	for (i = 0; i < WATCHMAN_MAX_CHILDREN; ++i)
-		if (_children[i])
+		if (_children[i].child)
 			_handle_child(i);
 
 	return 0;
@@ -304,17 +315,38 @@ int Watchman::_handle_children()
 
 int Watchman::_handle_child(int i)
 {
+	/* TODO Handle errors.
+	 */
+
 	if (_pfds[1 + 4*i].revents & POLLIN) {
-		_buffers[i]->read_from_stdout(_children[i]->stdout_fileno());
+		_children[i].buffer->read_from_stdout(_children[i].child->stdout_fileno());
 	}
 	if (_pfds[2 + 4*i].revents & POLLIN) {
-		_buffers[i]->read_from_stderr(_children[i]->stderr_fileno());
+		_children[i].buffer->read_from_stderr(_children[i].child->stderr_fileno());
 	}
 	if (_pfds[3 + 4*i].revents & POLLOUT) {
-		_buffers[i]->write_to_stdout(_fps[i]->stdout_fileno());
+		_children[i].buffer->write_to_stdout(_children[i].fp->stdout_fileno());
 	}
 	if (_pfds[4 + 4*i].revents & POLLOUT) {
-		_buffers[i]->write_to_stderr(_fps[i]->stderr_fileno());
+		_children[i].buffer->write_to_stderr(_children[i].fp->stderr_fileno());
+	}
+
+	if ((WATCHMAN_CHILD_FINISHED == _children[i].flags) &&
+	    (_pfds[1 + 4*i].revents & POLLHUP) &&
+	    (_pfds[2 + 4*i].revents & POLLHUP)) {
+
+//	fprintf(stderr, " >>>>>> %d %d \n", _pfds[1 + 4*i].revents & POLLHUP, _pfds[2 + 4*i].revents & POLLHUP);
+//
+//	if ((WATCHMAN_CHILD_FINISHED == _children[i].flags) &&
+//            !(_pfds[1 + 4*i].revents & POLLIN) &&
+//            !(_pfds[2 + 4*i].revents & POLLIN)) {
+
+		_children[i].child->wait();
+
+		_children[i].child  = NULL;
+		_children[i].flags  = 0;
+		_children[i].buffer = NULL;
+		_children[i].fp     = NULL;
 	}
 
 	return 0;
@@ -325,10 +357,10 @@ int Watchman::add_child(Child *child, Buffer *buffer, File_Pair *fp)
 	int i;
 
 	for (i = 0; i < WATCHMAN_MAX_CHILDREN; ++i)
-		if (NULL == _children[i]) {
-			_children[i] = child;
-			_buffers[i]  = buffer;
-			_fps[i]      = fp;
+		if (NULL == _children[i].child) {
+			_children[i].child  = child;
+			_children[i].buffer = buffer;
+			_children[i].fp     = fp;
 			return 0;
 		}
 

@@ -11,6 +11,14 @@ class Child;
 class Buffer;
 class File_Pair;
 
+struct _Watchman_Child
+{
+	Child		*child;
+	int		flags;
+	Buffer		*buffer;
+	File_Pair	*fp;
+};
+
 /* Watchman: Main application class.
  */
 class Watchman
@@ -46,9 +54,7 @@ private:
 	int		_handle_sigalrm();
 
 private:
-	Child		*_children[WATCHMAN_MAX_CHILDREN];
-	Buffer		*_buffers [WATCHMAN_MAX_CHILDREN];
-	File_Pair	*_fps     [WATCHMAN_MAX_CHILDREN];
+	_Watchman_Child	_children[WATCHMAN_MAX_CHILDREN];
 
 	int		_num_children_left() const;
 	int		_find_child_by_pid(long long pid) const;
@@ -87,6 +93,12 @@ enum
 	WATCHMAN_EXIT_PHASE_BEGIN,
 	WATCHMAN_EXIT_PHASE_AGAIN,
 	WATCHMAN_EXIT_PHASE_QUIT
+};
+
+enum
+{
+	WATCHMAN_CHILD_ALIVE	= 1,
+	WATCHMAN_CHILD_FINISHED
 };
 
 #endif
