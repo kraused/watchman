@@ -1,0 +1,48 @@
+#!/usr/bin/python2
+
+import sys
+import os
+import re
+import random
+import string
+import time
+
+#
+# Split the comma-separated list of integers and expand ranges.
+def expand(intList):
+	# Replaces ([0-9]+)-([0-9]+) by a comma separted list
+	def match1(matchobj):
+		tmp0, tmp1 = matchobj.group(0).split('-')
+
+		if int(tmp0) > int(tmp1):
+			raise Exception("Invalid integer list")
+
+		tmp2 = range(int(tmp0), int(tmp1) + 1)
+		# slurm completely ignores len(tmp1) and we shall follow
+		# that example.
+		fmt = "%%0%dd" % len(tmp0)
+		return ",".join([fmt % z for z in tmp2])
+
+	return map(int, re.sub(r'([0-9]+)-([0-9]+)', match1, intList).split(","))
+
+
+nrounds     = int(sys.argv[1])
+lineLens    = expand(sys.argv[2])
+linesAtOnce = expand(sys.argv[3])
+hz          = float(sys.argv[4])
+copy        = open(sys.argv[5], "w")
+
+
+random.seed(0)
+
+for _ in range(nrounds):
+	lines = []
+	for i in range(random.choice(linesAtOnce)):
+		lines.append("".join([random.choice(string.printable) for _ in range(random.choice(lineLens) - 1)]) + "\n")
+
+	for line in lines:
+		os.write(sys.stdout.fileno(), line)
+		copy.write(line)
+
+	time.sleep(1.0/hz)
+

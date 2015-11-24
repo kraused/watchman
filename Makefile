@@ -6,7 +6,7 @@ LD       = g++
 LDFLAGS  = -fno-exceptions -fno-rtti -fPIC -Wl,-export-dynamic -O0 -ggdb
 LIBS     = -ldl
 
-TESTS = tests/test1.so tests/test2.so
+TESTS = tests/test1.so tests/test2.so tests/test3.so tests/test4.so
 
 default: all
 

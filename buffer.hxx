@@ -74,7 +74,7 @@ private:
 	long long		_flush(int fd, _Buffer_Line_Queue *q);
 
 	/* TODO Two different queues for stdout and stderr are overkill
-	 *      in particular because we one usually expects applications
+	 *      in particular because one usually expects applications
 	 *      to write mostly to stdout and rarely to stderr.
 	 */
 private:
