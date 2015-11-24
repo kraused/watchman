@@ -67,8 +67,8 @@ int Program::execute()
 	close(po[1]);
 	close(pe[1]);
 
-	_fd_o = po[0];
-	_fd_e = pe[0];
+	_fds.set_stdout_fileno(po[0]);
+	_fds.set_stderr_fileno(pe[0]);
 
 	return 0;
 }

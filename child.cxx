@@ -8,7 +8,7 @@
 #include "error.hxx"
 
 Child::Child()
-: _pid(-1), _fd_o(-1), _fd_e(-1)
+: _pid(-1), _fds(-1, -1)
 {
 }
 

@@ -2,6 +2,8 @@
 #ifndef WATCHMAN_CHILD_HXX_INCLUDED
 #define WATCHMAN_CHILD_HXX_INCLUDED 1
 
+#include "file_pair.hxx"
+
 class Child
 {
 
@@ -34,8 +36,7 @@ private:
 
 protected:
 	long long		_pid;
-	int			_fd_o;
-	int			_fd_e;
+	File_Pair		_fds;
 };
 
 inline long long Child::pid() const
@@ -45,12 +46,12 @@ inline long long Child::pid() const
 
 inline int Child::stdout_fileno() const
 {
-	return _fd_o;
+	return _fds.stdout_fileno();
 }
 
 inline int Child::stderr_fileno() const
 {
-	return _fd_e;
+	return _fds.stderr_fileno();
 }
 
 #endif

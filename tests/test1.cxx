@@ -1,6 +1,10 @@
 
+#include <unistd.h>
+
 #include "plugin.hxx"
 #include "child.hxx"
+#include "buffer.hxx"
+#include "file_pair.hxx"
 #include "watchman.hxx"
 #include "compiler.hxx"
 #include "error.hxx"
@@ -33,14 +37,16 @@ int Test1_Child::kill()
 	return 0;
 }
 
-static Watchman_Plugin plu;
-static Test1_Child     proc;
+static Watchman_Plugin	plu;
+static Test1_Child	proc;
+static Buffer		buf;
+static File_Pair	fp(STDOUT_FILENO, STDERR_FILENO);
 
 int _init(Watchman *w)
 {
 	int err;
 
-	err = w->add_child(&proc);
+	err = w->add_child(&proc, &buf, &fp);
 	if (unlikely(err)) {
 		WATCHMAN_ERROR("Failed to add children to list: %d", err);
 		return err;

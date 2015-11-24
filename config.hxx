@@ -37,5 +37,15 @@
 #undef	WATCHMAN_PROGRAM_MAX_ARGC
 #define WATCHMAN_PROGRAM_MAX_ARGC	16
 
+/* Number of lines in the buffer queue
+ */
+#undef  WATCHMAN_BUFFER_QUEUE_LEN
+#define WATCHMAN_BUFFER_QUEUE_LEN	64
+
+/* Maximal line length that the buffer class can handle
+ */
+#undef  WATCHMAN_BUFFER_MAX_LINELEN
+#define WATCHMAN_BUFFER_MAX_LINELEN	512
+
 #endif
 

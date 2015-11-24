@@ -8,6 +8,9 @@
 #include "watchman.hxx"
 #include "compiler.hxx"
 #include "error.hxx"
+#include "child.hxx"
+#include "buffer.hxx"
+#include "file_pair.hxx"
 
 Watchman::Watchman()
 : _sfd(-1), _exit_phase(0)
@@ -126,16 +129,26 @@ void Watchman::_fill_poll_fds()
 		if (NULL == _children[i])
 			continue;
 
-		_pfds[1 + 2*j].fd     = _children[i]->stdout_fileno();
-		_pfds[1 + 2*j].events = POLLIN;
+		_pfds[1 + 4*j].fd     = _children[i]->stdout_fileno();
+		_pfds[1 + 4*j].events = POLLIN;
 
-		_pfds[2 + 2*j].fd     = _children[i]->stderr_fileno();
-		_pfds[2 + 2*j].events = POLLIN;
+		_pfds[2 + 4*j].fd     = _children[i]->stderr_fileno();
+		_pfds[2 + 4*j].events = POLLIN;
+
+		if (_buffers[i]->stdout_pending()) {
+			_pfds[3 + 4*j].fd     = _fps[i]->stdout_fileno();
+			_pfds[3 + 4*j].events = POLLOUT;
+		}
+
+		if (_buffers[i]->stderr_pending()) {
+			_pfds[4 + 4*j].fd     = _fps[i]->stderr_fileno();
+			_pfds[4 + 4*j].events = POLLOUT;
+		}
 
 		++j;
 	}
 
-	_num_pfds = 1 + 2*_num_children_left();
+	_num_pfds = 1 + 4*_num_children_left();
 }
 
 int Watchman::_poll()
@@ -209,16 +222,14 @@ int Watchman::_handle_sigchld(long long pid)
 		return -1;
 	}
 
-	/* FIXME Read remaining bytes from the children stdin/stdout if possible
+	/* FIXME Handle errors
 	 */
-	{
-		char line[128];
 
-		memset(line, 0, sizeof(line));
-		read(_children[i]->stdout_fileno(), line, 127);
+	_buffers[i]->read_from_stdout(_children[i]->stdout_fileno());
+	_buffers[i]->flush_stdout(_fps[i]->stdout_fileno());
 
-		fprintf(stdout, "%s", line);
-	}
+	_buffers[i]->read_from_stderr(_children[i]->stderr_fileno());
+	_buffers[i]->flush_stderr(_fps[i]->stderr_fileno());
 
 	/* FIXME Cleanup
 	 */
@@ -243,6 +254,8 @@ int Watchman::_handle_sigquit(int signo)
 			_children[i]->terminate();
 		}
 
+	/* TODO Use a timerfd instead.
+	 */
 	alarm(WATCHMAN_ALARM_SECS);
 	_exit_phase = WATCHMAN_EXIT_PHASE_BEGIN;
 
@@ -291,31 +304,31 @@ int Watchman::_handle_children()
 
 int Watchman::_handle_child(int i)
 {
-	char line[128];		/* FIXME */
-
-	if (_pfds[1 + 2*i].revents & POLLIN) {
-		memset(line, 0, sizeof(line));
-		read(_children[i]->stdout_fileno(), line, 127);
-
-		fprintf(stdout, "%s", line);
+	if (_pfds[1 + 4*i].revents & POLLIN) {
+		_buffers[i]->read_from_stdout(_children[i]->stdout_fileno());
 	}
-	if (_pfds[2 + 2*i].revents & POLLIN) {
-		memset(line, 0, sizeof(line));
-		read(_children[i]->stderr_fileno(), line, 127);
-
-		fprintf(stderr, "%s", line);
+	if (_pfds[2 + 4*i].revents & POLLIN) {
+		_buffers[i]->read_from_stderr(_children[i]->stderr_fileno());
+	}
+	if (_pfds[3 + 4*i].revents & POLLOUT) {
+		_buffers[i]->write_to_stdout(_fps[i]->stdout_fileno());
+	}
+	if (_pfds[4 + 4*i].revents & POLLOUT) {
+		_buffers[i]->write_to_stderr(_fps[i]->stderr_fileno());
 	}
 
 	return 0;
 }
 
-int Watchman::add_child(Child *child)
+int Watchman::add_child(Child *child, Buffer *buffer, File_Pair *fp)
 {
 	int i;
 
 	for (i = 0; i < WATCHMAN_MAX_CHILDREN; ++i)
 		if (NULL == _children[i]) {
 			_children[i] = child;
+			_buffers[i]  = buffer;
+			_fps[i]      = fp;
 			return 0;
 		}
 
