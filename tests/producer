@@ -38,7 +38,8 @@ random.seed(0)
 for _ in range(nrounds):
 	lines = []
 	for i in range(random.choice(linesAtOnce)):
-		lines.append("".join([random.choice(string.printable) for _ in range(random.choice(lineLens) - 1)]) + "\n")
+#		lines.append("".join([random.choice("a") for _ in range(random.choice(lineLens) - 1)]) + "\n")
+		lines.append("".join([random.choice("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 \t\n") for _ in range(random.choice(lineLens) - 1)]) + "\n")
 #		lines.append("".join([random.choice(["a"]) for _ in range(random.choice(lineLens) - 1)]) + "\n")
 
 	for line in lines:

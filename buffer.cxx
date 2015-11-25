@@ -9,6 +9,9 @@
 #include "buffer.hxx"
 #include "compiler.hxx"
 
+static long long _find_last_newline(const char *start, const char *end);
+static void _copy_to_Buffer_Line(const char *start, const char *end, _Buffer_Line **line, _Buffer_Line_Queue *q);
+
 _Buffer_Line_Queue::_Buffer_Line_Queue()
 : _head(0), _tail(0)
 {
@@ -39,12 +42,18 @@ _Buffer_Line *_Buffer_Line_Queue::tail()
 
 void _Buffer_Line_Queue::dequeue()
 {
+	head()->begin = 0;
+	head()->size  = 0;
+
 	++_head;
 }
 
 void _Buffer_Line_Queue::enqueue()
 {
 	++_tail;
+
+	if (length() > WATCHMAN_BUFFER_QUEUE_LEN)
+		++_head;
 
 	tail()->begin = 0;
 	tail()->size  = 0;
@@ -74,51 +83,28 @@ long long Buffer::write_to_stderr(int fd)
 	return _write_to(fd, &_q_e);
 }
 
-long long Buffer::flush_stdout(int fd)
-{
-	return _flush(fd, &_q_o);
-}
-
-long long Buffer::flush_stderr(int fd)
-{
-	return _flush(fd, &_q_e);
-}
-
 long long Buffer::_read_from(int fd, _Buffer_Line_Queue *q)
 {
-	long long n;
-	int i;
-	char *x;
-	_Buffer_Line *line = q->tail();
-
-	if (!line) {
-		q->enqueue();
-		line = q->tail();
-	}
+	long long n, k;
+	_Buffer_Line *line = q->tail();	/* May be NULL. */
 
 	/* FIXME Handle errors.
 	 */
 
 	n = read(fd, _buf, WATCHMAN_BUFFER_MAX_LINELEN);
 
-	if (likely(n >= 0))
-		_buf[n] = 0;
+	if (unlikely(n < 0))
+		return n;
 
-	for (x = _buf; *x; ++x) {
-		i = line->begin + line->size;
-
-		if (i >= WATCHMAN_BUFFER_MAX_LINELEN) {
-			q->enqueue();
-			line = q->tail();
-		}
-
-		line->line[i] = *x;
-		++line->size;
-
-		if('\n' == *x) {
-			q->enqueue();
-			line = q->tail();
-		}
+	/* Try to fit as many output lines into one _Buffer_Line to avoid wasting
+	 * space. */
+	k = _find_last_newline(_buf, (_buf + n));
+	if (k >= 0) {
+		_copy_to_Buffer_Line(_buf, (_buf + k + 1), &line, q);
+		line = NULL;	/* Grep a new line in next call to _copy_to_Buffer_Line(). */
+		_copy_to_Buffer_Line((_buf + k + 1), (_buf + n), &line, q);
+	} else {
+		_copy_to_Buffer_Line(_buf, (_buf + n), &line, q);
 	}
 
 	return n;
@@ -147,21 +133,41 @@ long long Buffer::_write_to(int fd, _Buffer_Line_Queue *q)
 	return n;
 }
 
-long long Buffer::_flush(int fd, _Buffer_Line_Queue *q)
+static long long _find_last_newline(const char *start, const char *end)
 {
-	long long n, x;
+	long long k = -1;
+	const char *x;
 
-	n = 0;
-
-	/* FIXME Handle errors and make sure that this loop is not an infinite
-	 *       one.
-	 */
-	while (q->length() > 0) {
-		x = _write_to(fd, q);
-		if (x > 0)
-			n += x;
+	for(x = start; x != end; ++x) {
+		if ('\n' == *x)
+			k = (x - start);
 	}
 
-	return n;
+	return k;
+}
+
+static void _copy_to_Buffer_Line(const char *start, const char *end, _Buffer_Line **line, _Buffer_Line_Queue *q)
+{
+	long long i;
+	const char *x;
+
+	if(NULL == (*line)) {
+		q->enqueue();
+		*line = q->tail();
+	}
+
+	for (x = start; x != end; ++x) {
+		i = (*line)->begin + (*line)->size;
+
+		if (i >= WATCHMAN_BUFFER_MAX_LINELEN) {
+			q->enqueue();
+			*line = q->tail();
+
+			i = (*line)->begin + (*line)->size;
+		}
+
+		(*line)->line[i] = *x;
+		++(*line)->size;
+	}
 }
 

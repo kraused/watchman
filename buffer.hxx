@@ -66,13 +66,6 @@ public:
 	inline bool		stdout_pending() const;
 	inline bool		stderr_pending() const;
 
-public:
-	long long		flush_stdout(int fd);
-	long long		flush_stderr(int fd);
-
-private:
-	long long		_flush(int fd, _Buffer_Line_Queue *q);
-
 	/* TODO Two different queues for stdout and stderr are overkill
 	 *      in particular because one usually expects applications
 	 *      to write mostly to stdout and rarely to stderr.
