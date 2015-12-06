@@ -9,14 +9,15 @@
 
 class Child;
 class Buffer;
-class File_Pair;
+class File;
 
 struct _Watchman_Child
 {
 	Child		*child;
 	int		flags;
 	Buffer		*buffer;
-	File_Pair	*fp;
+	File		*fo;
+	File		*fe;
 };
 
 /* Watchman: Main application class.
@@ -70,7 +71,7 @@ public:
 			 * advised as it will result in an unpredicable distribution of
 			 * output lines over the different files.
 			 */
-	int		add_child(Child *child, Buffer *buffer, File_Pair *fp);
+	int		add_child(Child *child, Buffer *buffer, File *fo, File *fe);
 
 private:
 #undef	WATCHMAN_MAX_POLLFDS

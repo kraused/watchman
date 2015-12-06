@@ -12,7 +12,7 @@ default: all
 
 all: watchman.exe $(TESTS)
 
-watchman.exe: main.o watchman.o child.o program.o buffer.o file_pair.o initfini.o error.o
+watchman.exe: main.o watchman.o child.o program.o buffer.o file.o initfini.o error.o
 	$(LD) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 main.o: main.cxx

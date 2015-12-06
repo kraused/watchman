@@ -2,7 +2,7 @@
 #ifndef WATCHMAN_CHILD_HXX_INCLUDED
 #define WATCHMAN_CHILD_HXX_INCLUDED 1
 
-#include "file_pair.hxx"
+#include "file.hxx"
 
 class Child
 {
@@ -19,8 +19,8 @@ public:
 				 */
 	inline long long	pid() const;
 
-	inline int		stdout_fileno() const;
-	inline int		stderr_fileno() const;
+	inline File		*file_o();
+	inline File		*file_e();
 
 public:
 				/* Soft termination request. On Linux this
@@ -39,7 +39,8 @@ private:
 
 protected:
 	long long		_pid;
-	File_Pair		_fds;
+	File			_fo;
+	File			_fe;
 };
 
 inline long long Child::pid() const
@@ -47,14 +48,14 @@ inline long long Child::pid() const
 	return _pid;
 }
 
-inline int Child::stdout_fileno() const
+inline File *Child::file_o()
 {
-	return _fds.stdout_fileno();
+	return &_fo;
 }
 
-inline int Child::stderr_fileno() const
+inline File *Child::file_e()
 {
-	return _fds.stderr_fileno();
+	return &_fe;
 }
 
 #endif

@@ -10,7 +10,7 @@
 #include "error.hxx"
 
 Child::Child()
-: _pid(-1), _fds(-1, -1)
+: _pid(-1), _fo(-1), _fe(-1)
 {
 }
 

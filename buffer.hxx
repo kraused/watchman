@@ -4,6 +4,8 @@
 
 #include "config.hxx"
 
+struct File;
+
 struct _Buffer_Line
 {
 	short			begin;
@@ -49,18 +51,18 @@ public:
 				explicit Buffer();
 
 public:
-	long long		read_from_stdout(int fd);
-	long long		read_from_stderr(int fd);
+	long long		read_from_stdout(File *f);
+	long long		read_from_stderr(File *f);
 
 private:
-	long long		_read_from(int fd, _Buffer_Line_Queue *q);
+	long long		_read_from(File *f, _Buffer_Line_Queue *q);
 
 public:
-	long long		write_to_stdout(int fd);
-	long long		write_to_stderr(int fd);
+	long long		write_to_stdout(File *f);
+	long long		write_to_stderr(File *f);
 
 private:
-	long long		_write_to(int fd, _Buffer_Line_Queue *q);
+	long long		_write_to(File *f, _Buffer_Line_Queue *q);
 
 public:
 	inline bool		stdout_pending() const;

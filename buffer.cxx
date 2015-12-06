@@ -8,6 +8,7 @@
 
 #include "buffer.hxx"
 #include "compiler.hxx"
+#include "file.hxx"
 
 static long long _find_last_newline(const char *start, const char *end);
 static void _copy_to_Buffer_Line(const char *start, const char *end, _Buffer_Line **line, _Buffer_Line_Queue *q);
@@ -63,27 +64,27 @@ Buffer::Buffer()
 {
 }
 
-long long Buffer::read_from_stdout(int fd)
+long long Buffer::read_from_stdout(File *f)
 {
-	return _read_from(fd, &_q_o);
+	return _read_from(f, &_q_o);
 }
 
-long long Buffer::read_from_stderr(int fd)
+long long Buffer::read_from_stderr(File *f)
 {
-	return _read_from(fd, &_q_e);
+	return _read_from(f, &_q_e);
 }
 
-long long Buffer::write_to_stdout(int fd)
+long long Buffer::write_to_stdout(File *f)
 {
-	return _write_to(fd, &_q_o);
+	return _write_to(f, &_q_o);
 }
 
-long long Buffer::write_to_stderr(int fd)
+long long Buffer::write_to_stderr(File *f)
 {
-	return _write_to(fd, &_q_e);
+	return _write_to(f, &_q_e);
 }
 
-long long Buffer::_read_from(int fd, _Buffer_Line_Queue *q)
+long long Buffer::_read_from(File *f, _Buffer_Line_Queue *q)
 {
 	long long n, k;
 	_Buffer_Line *line = q->tail();	/* May be NULL. */
@@ -91,7 +92,7 @@ long long Buffer::_read_from(int fd, _Buffer_Line_Queue *q)
 	/* FIXME Handle errors.
 	 */
 
-	n = read(fd, _buf, WATCHMAN_BUFFER_MAX_LINELEN);
+	n = f->read(_buf, WATCHMAN_BUFFER_MAX_LINELEN);
 
 	if (unlikely(n < 0))
 		return n;
@@ -110,7 +111,7 @@ long long Buffer::_read_from(int fd, _Buffer_Line_Queue *q)
 	return n;
 }
 
-long long Buffer::_write_to(int fd, _Buffer_Line_Queue *q)
+long long Buffer::_write_to(File *f, _Buffer_Line_Queue *q)
 {
 	long long n;
 	_Buffer_Line *line = q->head();
@@ -120,7 +121,7 @@ long long Buffer::_write_to(int fd, _Buffer_Line_Queue *q)
 
 	n = 0;
 	if (line->size > 0)
-		n = write(fd, line->line + line->begin, line->size);
+		n = f->write(line->line + line->begin, line->size);
 
 	if (likely(n > 0)) {
 		line->begin += n;

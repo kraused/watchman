@@ -21,7 +21,8 @@ Watchman::Watchman()
 		_children[i].child  = NULL;
 		_children[i].flags  = 0;
 		_children[i].buffer = NULL;
-		_children[i].fp     = NULL;
+		_children[i].fo     = NULL;
+		_children[i].fe     = NULL;
 	}
 }
 
@@ -135,19 +136,19 @@ void Watchman::_fill_poll_fds()
 		if (NULL == _children[i].child)
 			continue;
 
-		_pfds[1 + 4*j].fd     = _children[i].child->stdout_fileno();
+		_pfds[1 + 4*j].fd     = _children[i].child->file_o()->fileno();
 		_pfds[1 + 4*j].events = POLLIN;
 
-		_pfds[2 + 4*j].fd     = _children[i].child->stderr_fileno();
+		_pfds[2 + 4*j].fd     = _children[i].child->file_e()->fileno();
 		_pfds[2 + 4*j].events = POLLIN;
 
 		if (_children[i].buffer->stdout_pending()) {
-			_pfds[3 + 4*j].fd     = _children[i].fp->stdout_fileno();
+			_pfds[3 + 4*j].fd     = _children[i].fo->fileno();
 			_pfds[3 + 4*j].events = POLLOUT;
 		}
 
 		if (_children[i].buffer->stderr_pending()) {
-			_pfds[4 + 4*j].fd     = _children[i].fp->stderr_fileno();
+			_pfds[4 + 4*j].fd     = _children[i].fe->fileno();
 			_pfds[4 + 4*j].events = POLLOUT;
 		}
 
@@ -237,10 +238,10 @@ int Watchman::_handle_sigchld(long long pid)
 //	 */
 //
 //	_children[i].buffer->read_from_stdout(_children[i]->stdout_fileno());
-//	_children[i].buffer->flush_stdout(_children[i].fp->stdout_fileno());
+//	_children[i].buffer->flush_stdout(_children[i].fo->fileno());
 //
 //	_children[i].buffer->read_from_stderr(_children[i]->stderr_fileno());
-//	_children[i].buffer->flush_stderr(_children[i].fp->stderr_fileno());
+//	_children[i].buffer->flush_stderr(_children[i].fe->fileno());
 //
 //	/* FIXME Cleanup
 //	 */
@@ -319,16 +320,16 @@ int Watchman::_handle_child(int i)
 	 */
 
 	if (_pfds[1 + 4*i].revents & POLLIN) {
-		_children[i].buffer->read_from_stdout(_children[i].child->stdout_fileno());
+		_children[i].buffer->read_from_stdout(_children[i].child->file_o());
 	}
 	if (_pfds[2 + 4*i].revents & POLLIN) {
-		_children[i].buffer->read_from_stderr(_children[i].child->stderr_fileno());
+		_children[i].buffer->read_from_stderr(_children[i].child->file_e());
 	}
 	if (_pfds[3 + 4*i].revents & POLLOUT) {
-		_children[i].buffer->write_to_stdout(_children[i].fp->stdout_fileno());
+		_children[i].buffer->write_to_stdout(_children[i].fo);
 	}
 	if (_pfds[4 + 4*i].revents & POLLOUT) {
-		_children[i].buffer->write_to_stderr(_children[i].fp->stderr_fileno());
+		_children[i].buffer->write_to_stderr(_children[i].fe);
 	}
 
 	if ((WATCHMAN_CHILD_FINISHED == _children[i].flags) &&
@@ -346,13 +347,14 @@ int Watchman::_handle_child(int i)
 		_children[i].child  = NULL;
 		_children[i].flags  = 0;
 		_children[i].buffer = NULL;
-		_children[i].fp     = NULL;
+		_children[i].fo     = NULL;
+		_children[i].fe     = NULL;
 	}
 
 	return 0;
 }
 
-int Watchman::add_child(Child *child, Buffer *buffer, File_Pair *fp)
+int Watchman::add_child(Child *child, Buffer *buffer, File *fo, File *fe)
 {
 	int i;
 
@@ -360,7 +362,8 @@ int Watchman::add_child(Child *child, Buffer *buffer, File_Pair *fp)
 		if (NULL == _children[i].child) {
 			_children[i].child  = child;
 			_children[i].buffer = buffer;
-			_children[i].fp     = fp;
+			_children[i].fo     = fo;
+			_children[i].fe     = fe;
 			return 0;
 		}
 
