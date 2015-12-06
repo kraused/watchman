@@ -10,12 +10,20 @@ File::File(int fd)
 
 long long File::read(void *buf, long long nbyte)
 {
-	return ::read(_fd, buf, nbyte);
+	long long x;
+
+	x = ::read(_fd, buf, nbyte);
+
+	return x;
 }
 
 long long File::write(const void *buf, long long nbyte)
 {
-	return ::write(_fd, buf, nbyte);
+	long long x;
+
+	x = ::write(_fd, buf, nbyte);
+
+	return x;
 }
 
 int File::reopen()

@@ -234,20 +234,6 @@ int Watchman::_handle_sigchld(long long pid)
 	 */
 	_children[i].flags = WATCHMAN_CHILD_FINISHED;
 
-//	/* FIXME Handle errors
-//	 */
-//
-//	_children[i].buffer->read_from_stdout(_children[i]->stdout_fileno());
-//	_children[i].buffer->flush_stdout(_children[i].fo->fileno());
-//
-//	_children[i].buffer->read_from_stderr(_children[i]->stderr_fileno());
-//	_children[i].buffer->flush_stderr(_children[i].fe->fileno());
-//
-//	/* FIXME Cleanup
-//	 */
-//
-//	_children[i] = NULL;
-
 	return 0;
 }
 
@@ -335,12 +321,6 @@ int Watchman::_handle_child(int i)
 	if ((WATCHMAN_CHILD_FINISHED == _children[i].flags) &&
 	    (_pfds[1 + 4*i].revents & POLLHUP) &&
 	    (_pfds[2 + 4*i].revents & POLLHUP)) {
-
-//	fprintf(stderr, " >>>>>> %d %d \n", _pfds[1 + 4*i].revents & POLLHUP, _pfds[2 + 4*i].revents & POLLHUP);
-//
-//	if ((WATCHMAN_CHILD_FINISHED == _children[i].flags) &&
-//            !(_pfds[1 + 4*i].revents & POLLIN) &&
-//            !(_pfds[2 + 4*i].revents & POLLIN)) {
 
 		_children[i].child->wait();
 
