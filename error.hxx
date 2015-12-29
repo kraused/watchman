@@ -24,7 +24,7 @@ private:
 			        const char* fmt, va_list vl);
 };
 
-/* Convenience wrappers around Error:X() functions
+/* Convenience wrappers around Error::X() functions
  */
 #define WATCHMAN_ERROR(FMT, ...)	Error::error(__FILE__, __func__, __LINE__, FMT, ## __VA_ARGS__)
 #define WATCHMAN_WARN(FMT, ...)		Error::warn(__FILE__, __func__, __LINE__, FMT, ## __VA_ARGS__)
