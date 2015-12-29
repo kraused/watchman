@@ -12,5 +12,8 @@
 #undef  FAILFS_MIRRORDIR
 #define FAILFS_MIRRORDIR	"/dev/shm/failfs-mirrordir-%s"
 
+#undef  FAILFS_CMD_SOCKET
+#define FAILFS_CMD_SOCKET	"/dev/shm/failfs.sock"
+
 #endif
 

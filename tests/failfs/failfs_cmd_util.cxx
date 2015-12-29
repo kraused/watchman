@@ -29,7 +29,7 @@ int main(int argc, char **argv)
 	memset(&addr, 0, sizeof(addr));
 	addr.sun_family = AF_UNIX;
 
-	err = snprintf(addr.sun_path, sizeof(addr.sun_path), "/dev/shm/failfs.sock");
+	err = snprintf(addr.sun_path, sizeof(addr.sun_path), FAILFS_CMD_SOCKET);
 	if (unlikely((err < 0) || (err >= FAILFS_PATH_MAXLEN))) {
 		FAILFS_ERROR("snprintf() failed: unix domain socket path truncated");
 		return -ENAMETOOLONG;

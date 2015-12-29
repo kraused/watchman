@@ -32,5 +32,5 @@ failfs_cmd_util.exe: failfs_cmd_util.o error.o
 	@echo "CC  $@"
 
 clean:
-	-rm -f *.o failfs.exe
+	-rm -f *.o failfs.exe failfs_cmd_util.exe
 
