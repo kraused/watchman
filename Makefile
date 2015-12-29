@@ -1,6 +1,6 @@
 
 CXX      = g++
-CPPFLAGS = -I.
+CPPFLAGS = -I. -D_GNU_SOURCE
 CXXFLAGS = -fno-exceptions -fno-rtti -fPIC -Wall -O0 -ggdb
 LD       = g++
 LDFLAGS  = -fno-exceptions -fno-rtti -fPIC -Wl,-export-dynamic -O0 -ggdb
@@ -8,22 +8,28 @@ LIBS     = -ldl
 
 TESTS = tests/test1.so tests/test2.so tests/test3.so tests/test4.so
 
+Q = @
+
 default: all
 
-all: watchman.exe $(TESTS)
+all: watchman.exe tests/failfs/failfs.exe $(TESTS)
 
 watchman.exe: main.o watchman.o child.o program.o buffer.o file.o initfini.o error.o
-	$(LD) $(LDFLAGS) -o $@ $^ $(LIBS)
+	$(Q)$(LD) $(LDFLAGS) -o $@ $^ $(LIBS)
+	@echo "LD  $@"
 
-main.o: main.cxx
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ -c $<
+tests/failfs/failfs.exe:
+	make -C tests/failfs
 
 %.o: %.cxx
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ -c $<
+	$(Q)$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ -c $<
+	@echo "CXX $@"
 
 %.so: %.o
-	$(CXX) $(LDFLAGS) -shared -o $@ $<
+	$(Q)$(CXX) $(LDFLAGS) -shared -o $@ $<
+	@echo "CC  $@"
 
 clean:
+	make -C tests/failfs clean
 	-rm -f tests/*.o tests/*.so *.o watchman.exe
 
