@@ -10,7 +10,7 @@
 #include "error.hxx"
 #include "child.hxx"
 #include "buffer.hxx"
-#include "file_pair.hxx"
+#include "file.hxx"
 
 Watchman::Watchman()
 : _sfd(-1), _exit_phase(0)
@@ -41,13 +41,13 @@ int Watchman::init_signal_handling()
 	err = sigprocmask(SIG_BLOCK, &all, &_default_signal_set);
 	if (unlikely(err)) {
 		WATCHMAN_ERROR("Failed to block signals: %s", errno);
-		return err;
+		return -errno;
 	}
 
 	_sfd = signalfd(-1, &all, 0);
 	if (unlikely(-1 == _sfd)) {
 		WATCHMAN_ERROR("Failed to open signalfd: %s", errno);
-		return -1;
+		return -errno;
 	}
 
 	return 0;
@@ -55,7 +55,18 @@ int Watchman::init_signal_handling()
 
 int Watchman::fini_signal_handling()
 {
-	close(_sfd);
+	int err;
+
+	err = close(_sfd);
+	if (unlikely(err)) {
+		WATCHMAN_ERROR("close() failed with errno %d: %s", errno, strerror(errno));
+	}
+
+	err = sigprocmask(SIG_BLOCK, &_default_signal_set, NULL);
+	if (unlikely(err)) {
+		FAILFS_ERROR("Failed to reset default signal set");
+		return -errno;
+	}
 
 	return 0;
 }
@@ -176,8 +187,17 @@ int Watchman::_poll()
 int Watchman::_recv_and_handle_signal()
 {
 	struct signalfd_siginfo info;
+	int err;
 
-	read(_sfd, &info, sizeof(info));	/* FIXME Error handling. */
+	err = read(_sfd, &info, sizeof(info));
+	if (unlikely(err < 0)) {
+		WATCHMAN_ERROR("read() failed with errno %d: %s", errno, strerror(errno));
+		return -errno;
+	}
+	if (err != sizeof(info)) {
+		WATCHMAN_ERROR("read() returned %d (sizeof signalfd_siginfo is %d)\n", err, sizeof(info));
+		return -1;
+	}
 
 	WATCHMAN_DEBUG("Received signal %d", info.ssi_signo);
 
@@ -302,27 +322,46 @@ int Watchman::_handle_children()
 
 int Watchman::_handle_child(int i)
 {
-	/* TODO Handle errors.
-	 */
+	int err;
 
 	if (_pfds[1 + 4*i].revents & POLLIN) {
-		_children[i].buffer->read_from_stdout(_children[i].child->file_o());
+		err = _children[i].buffer->read_from_stdout(_children[i].child->file_o());
+		if (unlikely(err)) {
+			/* TODO Handle error.
+			 */
+		}
 	}
 	if (_pfds[2 + 4*i].revents & POLLIN) {
-		_children[i].buffer->read_from_stderr(_children[i].child->file_e());
+		err = _children[i].buffer->read_from_stderr(_children[i].child->file_e());
+		if (unlikely(err)) {
+			/* TODO Handle error.
+			 */
+		}
 	}
 	if (_pfds[3 + 4*i].revents & POLLOUT) {
-		_children[i].buffer->write_to_stdout(_children[i].fo);
+		err = _children[i].buffer->write_to_stdout(_children[i].fo);
+		if (unlikely(err)) {
+			/* TODO Handle error.
+			 */
+		}
 	}
 	if (_pfds[4 + 4*i].revents & POLLOUT) {
-		_children[i].buffer->write_to_stderr(_children[i].fe);
+		err = _children[i].buffer->write_to_stderr(_children[i].fe);
+		if (unlikely(err)) {
+			/* TODO Handle error.
+			 */
+		}
 	}
 
 	if ((WATCHMAN_CHILD_FINISHED == _children[i].flags) &&
 	    (_pfds[1 + 4*i].revents & POLLHUP) &&
 	    (_pfds[2 + 4*i].revents & POLLHUP)) {
 
-		_children[i].child->wait();
+		err = _children[i].child->wait();
+		if (unlikely(err)) {
+			/* TODO Handle error.
+			 */
+		}
 
 		_children[i].child  = NULL;
 		_children[i].flags  = 0;
