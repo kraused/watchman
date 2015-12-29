@@ -4,9 +4,11 @@
 #include <string.h>
 #include <errno.h>
 #include <unistd.h>
+#include <dirent.h>
 #include <sys/signalfd.h>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <sys/types.h>
 #include <sys/stat.h>
 
 #include "compiler.h"
@@ -402,9 +404,46 @@ int Failfs::create_mirrordir()
 
 int Failfs::remove_mirrordir()
 {
-	/* FIXME Remove the mirrordir */
+	int err;
+	DIR *d;
+	struct dirent *x;
 
-	return -1;
+	d = opendir(_mirrordir);
+	if (unlikely(!d)) {
+		FAILFS_ERROR("opendir() failed with errno %d: %s", errno, strerror(errno));
+		return -errno;
+	}
+
+	while (NULL != (x = readdir(d))) {
+		if ((!strcmp(x->d_name, ".")) ||
+		    (!strcmp(x->d_name, ".."))) {
+			continue;
+		}
+
+		err = snprintf(_tmp_buf0, FAILFS_PATH_MAXLEN, "%s/%s", _mirrordir, x->d_name);
+		if (unlikely((err < 0) || (err >= FAILFS_PATH_MAXLEN))) {
+			FAILFS_ERROR("snprintf() failed: path truncated");
+			continue;
+		}
+
+		err = unlink(_tmp_buf0);
+		if (unlikely(err)) {
+			FAILFS_ERROR("unlink() failed with errno %d: %s", errno, strerror(errno));
+		}
+	}
+
+	err = closedir(d);
+	if (unlikely(err)) {
+		FAILFS_ERROR("closedir() failed with errno %d: %s", errno, strerror(errno));
+	}
+
+	err = rmdir(_mirrordir);
+	if (unlikely(err)) {
+		FAILFS_ERROR("rmdir() failed with errno %d: %s", errno, strerror(errno));
+		return -errno;
+	}
+
+	return 0;
 }
 
 int Failfs::create_socketpair()
