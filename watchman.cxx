@@ -64,7 +64,7 @@ int Watchman::fini_signal_handling()
 
 	err = sigprocmask(SIG_BLOCK, &_default_signal_set, NULL);
 	if (unlikely(err)) {
-		FAILFS_ERROR("Failed to reset default signal set");
+		WATCHMAN_ERROR("Failed to reset default signal set");
 		return -errno;
 	}
 
