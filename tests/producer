@@ -35,12 +35,13 @@ copy        = open(sys.argv[5], "w")
 
 random.seed(0)
 
+ALPHABET = "a"
+ALPHABET = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 \t\n"
+
 for _ in range(nrounds):
 	lines = []
 	for i in range(random.choice(linesAtOnce)):
-#		lines.append("".join([random.choice("a") for _ in range(random.choice(lineLens) - 1)]) + "\n")
-		lines.append("".join([random.choice("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789 \t\n") for _ in range(random.choice(lineLens) - 1)]) + "\n")
-#		lines.append("".join([random.choice(["a"]) for _ in range(random.choice(lineLens) - 1)]) + "\n")
+		lines.append("".join([random.choice(ALPHABET) for _ in range(random.choice(lineLens) - 1)]) + "\n")
 
 	for line in lines:
 		os.write(sys.stdout.fileno(), line)
