@@ -17,7 +17,9 @@ enum
 	FAILFS_CMD_NOOP,
 
 	FAILFS_CMD_CHANGE_STATE_STALE,
-	FAILFS_CMD_CHANGE_STATE_NORMAL
+	FAILFS_CMD_CHANGE_STATE_NORMAL,
+	FAILFS_CMD_REMOUNT,
+	FAILFS_CMD_EXIT
 };
 
 /* Message types for internal communication with the FUSE
@@ -46,102 +48,111 @@ enum
 #include <signal.h>
 #include <poll.h>
 
+#include "failfs_fuse_thread.hxx"
+
 /* Failfs: Main application class.
  */
 class Failfs
 {
 
 public:
-			explicit Failfs();
-			~Failfs();
+				explicit Failfs();
+				~Failfs();
 
 private:
-	int		_state;
+	int			_state;
 
 private:
-	int		_sfd;
-	sigset_t	_default_signal_set;
+	int			_sfd;
+	sigset_t		_default_signal_set;
 
 public:
-	                /* Initialize the signal handling module. Block
-	                 * signals and open the signalfd.
-	                 */
-	int             init_signal_handling();
-	int             fini_signal_handling();
+				/* Initialize the signal handling module. Block
+				 * signals and open the signalfd.
+				 */
+	int			init_signal_handling();
+	int			fini_signal_handling();
 
 private:
-	int		_recv_and_handle_signal();
-	int		_handle_sigquit(int signo);
+	int			_recv_and_handle_signal();
+	int			_handle_sigquit(int signo);
 
 private:
-	int		_recv_and_handle_message();
-	int		_recv_and_handle_fuse_cmd(int cmd);
+	int			_recv_and_handle_message();
+	int			_recv_and_handle_fuse_cmd(int cmd);
 
 public:
-	int		loop();
+	int			loop();
 
 private:
-	int		_num_pfds;
-	struct pollfd	_pfds[4];
+	int			_num_pfds;
+	struct pollfd		_pfds[4];
 
-	void		_fill_poll_fds();
-	int		_poll();
-
-private:
-	int		_exit_loop;
+	void			_fill_poll_fds();
+	int			_poll();
 
 private:
-			/* Directory mirrored by failfs when operating
-			 * normally.
-			 */
-	char		_mirrordir[FAILFS_PATH_MAXLEN];
+	int			_exit_loop;
+
+private:
+				/* Directory mirrored by failfs when operating
+				 * normally.
+				 */
+	char			_mirrordir[FAILFS_PATH_MAXLEN];
 
 public:
-	int		create_mirrordir();
-	int		remove_mirrordir();
+	int			create_mirrordir();
+	int			remove_mirrordir();
 
 private:
-			/* Socket pair for the communication with the FUSE
-			 * thread.
-			 */
-	int		_sockp[2];
+				/* Socket pair for the communication with the FUSE
+				 * thread.
+				 */
+	int			_sockp[2];
 
 public:
-	int		create_socketpair();
-	int		close_socketpair();
+	int			create_socketpair();
+	int			close_socketpair();
 
-			/* Send a FUSE command message from the FUSE thread to
-			 * the main thread and receive the mirrored path as well
-			 * an error message if the request is to fail.
-			 *
-			 * mirror_path must have length > FAILFS_PATH_MAXLEN.
-			 */
-	int		send_fuse_cmd_and_recv(int cmd,
-			                       const char *path,
-			                       char *mirror_path,
-			                       int *cmd_err);
+				/* Send a FUSE command message from the FUSE thread to
+				 * the main thread and receive the mirrored path as well
+				 * an error message if the request is to fail.
+				 *
+				 * mirror_path must have length > FAILFS_PATH_MAXLEN.
+				 */
+	int			send_fuse_cmd_and_recv(int cmd,
+				                       const char *path,
+				                       char *mirror_path,
+				                       int *cmd_err);
 
-	int		send_exit_notification();
-
-private:
-	char		_tmp_buf0[FAILFS_PATH_MAXLEN];
-	char		_tmp_buf1[FAILFS_PATH_MAXLEN];
+	int			send_exit_notification();
 
 private:
-	int		_translate_path(const char *i_path, char *o_path);
+	char			_tmp_buf0[FAILFS_PATH_MAXLEN];
+	char			_tmp_buf1[FAILFS_PATH_MAXLEN];
+
+private:
+	int			_translate_path(const char *i_path, char *o_path);
 
 public:
-	int		bind_listenfd(const char *path);
-	int		close_listenfd();
+	int			bind_listenfd(const char *path);
+	int			close_listenfd();
 
 private:
-	int		_handle_commands();
+	int			_handle_commands();
 
 private:
-	char		_listenpath[FAILFS_PATH_MAXLEN];
-	int		_listenfd;
+	char			_listenpath[FAILFS_PATH_MAXLEN];
+	int			_listenfd;
 
-	int		_cmdfd;
+	int			_cmdfd;
+
+private:
+	Failfs_Fuse_Thread	_thr;
+
+public:
+	int			create_fuse_thread(const char *mountpoint);
+	int			destroy_fuse_thread();
 
 };
 

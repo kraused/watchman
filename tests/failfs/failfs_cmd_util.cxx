@@ -40,7 +40,7 @@ int main(int argc, char **argv)
 		FAILFS_ERROR("connect() failed with errno %d: %s", errno, strerror(errno));
 		return -errno;
 	}
-		
+
 	cmd = FAILFS_CMD_NOOP;
 
 	if (argv[1]) {
@@ -49,6 +49,12 @@ int main(int argc, char **argv)
 		}
 		if (!strcmp("normal", argv[1])) {
 			cmd = FAILFS_CMD_CHANGE_STATE_NORMAL;
+		}
+		if (!strcmp("remount", argv[1])) {
+			cmd = FAILFS_CMD_REMOUNT;
+		}
+		if (!strcmp("exit", argv[1])) {
+			cmd = FAILFS_CMD_EXIT;
 		}
 	}
 

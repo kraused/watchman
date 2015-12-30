@@ -15,7 +15,7 @@ default: all
 
 all: failfs.exe failfs_cmd_util.exe
 
-failfs.exe: main.o failfs.o error.o failfs_fuse.o
+failfs.exe: main.o failfs.o error.o failfs_fuse_thread.o failfs_fuse.o
 	$(Q)$(LD) $(LDFLAGS) -o $@ $^ $(LIBS)
 	@echo "LD  $@"
 

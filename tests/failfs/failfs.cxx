@@ -638,6 +638,15 @@ int Failfs::_handle_commands()
 		case FAILFS_CMD_CHANGE_STATE_NORMAL:
 			_state = FAILFS_STATE_NORMAL;
 			break;
+		case FAILFS_CMD_REMOUNT:
+			err = _thr.remount();
+			if (unlikely(err)) {
+				FAILFS_ERROR("remounting failed");
+			}
+			break;
+		case FAILFS_CMD_EXIT:
+			_exit_loop = 1;
+			break;
 		default:
 			FAILFS_WARN("Ignoring unknown command %d", cmd);
 		}
@@ -651,6 +660,16 @@ int Failfs::_handle_commands()
 	}
 
 	return 0;
+}
+
+int Failfs::create_fuse_thread(const char *mountpoint)
+{
+	return _thr.init(mountpoint, this);
+}
+
+int Failfs::destroy_fuse_thread()
+{
+	return _thr.fini();
 }
 
 int Failfs_send_fuse_cmd_and_recv(void *failfs,
