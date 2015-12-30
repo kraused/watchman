@@ -31,13 +31,17 @@ int Child::wait()
 
 	x = ::waitpid(_pid, &status, 0);
 
-	/* FIXME Evaluate status and handle errors returned by
-	 *       wait()
-	 */
+	if (unlikely(-1 == x)) {
+		WATCHMAN_ERROR("waitpid() failed with errno %d: %s", errno, strerror(errno));
+		return -errno;
+	}
 
-	fprintf(stderr, "wait(): %d\n", status);
+	WATCHMAN_DEBUG("WIFEXITED = %d, WIFSIGNALED = %d, WEXITSTATUS = %d",
+	               WIFEXITED(status),
+	               WIFSIGNALED(status),
+	               WEXITSTATUS(status));
 
-	return x;
+	return 0;
 }
 
 int Child::_send_signal_to_child(int signum)
