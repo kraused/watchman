@@ -49,26 +49,49 @@ int Program::execute()
 
 	_pid = fork();
 	if (0 == _pid) {
-		close(po[0]);
-		close(pe[0]);
-
-		/* FIXME Handle dup2 error. At least report close() errors.
-		 */
+		err = close(po[0]);
+		if (unlikely(err)) {
+			WATCHMAN_ERROR("close() failed with errno %d: %s", errno, strerror(errno));
+		}
+		err = close(pe[0]);
+		if (unlikely(err)) {
+			WATCHMAN_ERROR("close() failed with errno %d: %s", errno, strerror(errno));
+		}
 
 		if (po[1] != STDOUT_FILENO) {
-			dup2 (po[1], STDOUT_FILENO);
-			close(po[1]);
+			err = dup2(po[1], STDOUT_FILENO);
+			if (unlikely(err < 0)) {
+				WATCHMAN_ERROR("dup2() failed with errno %d: %s", errno, strerror(errno));
+				exit(1);
+			}
+			err = close(po[1]);
+			if (unlikely(err)) {
+				WATCHMAN_ERROR("close() failed with errno %d: %s", errno, strerror(errno));
+			}
 		}
 		if (pe[1] != STDERR_FILENO) {
-			dup2 (pe[1], STDERR_FILENO);
-			close(pe[1]);
+			err = dup2(pe[1], STDERR_FILENO);
+			if (unlikely(err < 0)) {
+				WATCHMAN_ERROR("dup2() failed with errno %d: %s", errno, strerror(errno));
+				exit(1);
+			}
+			err = close(pe[1]);
+			if (unlikely(err)) {
+				WATCHMAN_ERROR("close() failed with errno %d: %s", errno, strerror(errno));
+			}
 		}
 
 		_child_exec();
 	}
 
-	close(po[1]);
-	close(pe[1]);
+	err = close(po[1]);
+	if (unlikely(err)) {
+		WATCHMAN_ERROR("close() failed with errno %d: %s", errno, strerror(errno));
+	}
+	err = close(pe[1]);
+	if (unlikely(err)) {
+		WATCHMAN_ERROR("close() failed with errno %d: %s", errno, strerror(errno));
+	}
 
 	_fo.~File();
 	new (&_fo) File(po[0]);
