@@ -89,13 +89,10 @@ long long Buffer::_read_from(File *f, _Buffer_Line_Queue *q)
 	long long n, k;
 	_Buffer_Line *line = q->tail();	/* May be NULL. */
 
-	/* FIXME Handle errors.
-	 */
-
 	n = f->read(_buf, WATCHMAN_BUFFER_MAX_LINELEN);
-
-	if (unlikely(n < 0))
+	if (unlikely(n < 0)) {
 		return n;
+	}
 
 	/* Try to fit as many output lines into one _Buffer_Line to avoid wasting
 	 * space. */
@@ -116,12 +113,10 @@ long long Buffer::_write_to(File *f, _Buffer_Line_Queue *q)
 	long long n;
 	_Buffer_Line *line = q->head();
 
-	/* FIXME Handle errors.
-	 */
-
 	n = 0;
-	if (line->size > 0)
+	if (line->size > 0) {
 		n = f->write(line->line + line->begin, line->size);
+	}
 
 	if (likely(n > 0)) {
 		line->begin += n;

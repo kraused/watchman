@@ -9,7 +9,7 @@ int main(int argc, char **argv)
 	Watchman w;
 	int err;
 
-	err = initialize(&w, argv[1]);
+	err = initialize(&w, argv[1], argc - 2, &argv[2]);
 	if (unlikely(err)) {
 		WATCHMAN_ERROR("initialize() failed with exit code %d", err);
 		return err;

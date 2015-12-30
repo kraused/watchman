@@ -7,7 +7,7 @@
 #include "watchman.hxx"
 #include "plugin.hxx"
 
-static int _load_plugin(Watchman *w, const char *plugin)
+static int _load_plugin(Watchman *w, const char *plugin, int argc, char **argv)
 {
 	void *h;
 	void *p;
@@ -42,10 +42,10 @@ static int _load_plugin(Watchman *w, const char *plugin)
 	if (1 != plu->version)
 		WATCHMAN_WARN("Invalid plugin version %d", plu->version);
 
-	return plu->init(w);
+	return plu->init(w, argc, argv);
 }
 
-int initialize(Watchman *w, const char *plugin)
+int initialize(Watchman *w, const char *plugin, int argc, char **argv)
 {
 	int err;
 
@@ -58,7 +58,7 @@ int initialize(Watchman *w, const char *plugin)
 	if (unlikely(err))
 		return err;
 
-	err = _load_plugin(w, plugin);
+	err = _load_plugin(w, plugin, argc, argv);
 	if (unlikely(err))
 		return err;
 

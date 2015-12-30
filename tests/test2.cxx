@@ -44,7 +44,7 @@ static Buffer		buf;
 static File		fo(STDOUT_FILENO);
 static File		fe(STDERR_FILENO);
 
-int _init(Watchman *w)
+int _init(Watchman *w, int argc, char **argv)
 {
 	int err;
 

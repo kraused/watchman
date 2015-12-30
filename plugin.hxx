@@ -10,7 +10,10 @@ class Watchman;
 struct Watchman_Plugin
 {
 	int	version;
-	int	(*init)(Watchman *w);
+	/* Initialization function. In contrast to executable programs
+	 * argv[0] is the first argument for the plugin.
+	 */
+	int	(*init)(Watchman *w, int argc, char **argv);
 };
 
 #endif

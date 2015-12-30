@@ -1,6 +1,9 @@
 
 #include <unistd.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <errno.h>
 
 #include "plugin.hxx"
 #include "program.hxx"
@@ -52,9 +55,25 @@ static Buffer		buf;
 static File		fo(STDOUT_FILENO);
 static File		fe(STDERR_FILENO);
 
-int _init(Watchman *w)
+int _init(Watchman *w, int argc, char **argv)
 {
 	int err;
+
+	if (2 == argc) {
+		err = open(argv[0], O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
+		if (unlikely(err < 0)) {
+			WATCHMAN_ERROR("open() failed with errno %d: %s", errno, strerror(errno));
+			return -errno;
+		}
+		fo.replace_fd(err);
+
+		err = open(argv[1], O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
+		if (unlikely(err < 0)) {
+			WATCHMAN_ERROR("open() failed with errno %d: %s", errno, strerror(errno));
+			return -errno;
+		}
+		fe.replace_fd(err);
+	}
 
 	err = w->add_child(&proc, &buf, &fo, &fe);
 	if (unlikely(err)) {

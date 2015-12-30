@@ -9,7 +9,7 @@ class Watchman;
  * further from this point.
  */
 
-int initialize(Watchman *w, const char *plugin);
+int initialize(Watchman *w, const char *plugin, int argc, char **argv);
 int finalize  (Watchman *w);
 
 #endif
