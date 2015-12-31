@@ -87,7 +87,8 @@ private:
 	int		_num_pfds;
 	struct pollfd	_pfds[WATCHMAN_MAX_POLLFDS];
 
-	void		_fill_poll_fds();
+	void		_fill_pollfds();
+	void		_fill_single_pollfd(struct pollfd *pfd, File *f, int events);
 	int		_poll();
 
 private:

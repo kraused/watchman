@@ -139,7 +139,7 @@ int Watchman::loop()
 	return -1;
 }
 
-void Watchman::_fill_poll_fds()
+void Watchman::_fill_pollfds()
 {
 	int i, j;
 
@@ -152,20 +152,15 @@ void Watchman::_fill_poll_fds()
 		if (NULL == _children[i].child)
 			continue;
 
-		_pfds[1 + 4*j].fd     = _children[i].child->file_o()->fileno();
-		_pfds[1 + 4*j].events = POLLIN;
-
-		_pfds[2 + 4*j].fd     = _children[i].child->file_e()->fileno();
-		_pfds[2 + 4*j].events = POLLIN;
+		_fill_single_pollfd(&_pfds[1 + 4*j], _children[i].child->file_o(), POLLIN);
+		_fill_single_pollfd(&_pfds[2 + 4*j], _children[i].child->file_e(), POLLIN);
 
 		if (_children[i].buffer->stdout_pending()) {
-			_pfds[3 + 4*j].fd     = _children[i].fo->fileno();
-			_pfds[3 + 4*j].events = POLLOUT;
+			_fill_single_pollfd(&_pfds[3 + 4*j], _children[i].fo, POLLOUT);
 		}
 
 		if (_children[i].buffer->stderr_pending()) {
-			_pfds[4 + 4*j].fd     = _children[i].fe->fileno();
-			_pfds[4 + 4*j].events = POLLOUT;
+			_fill_single_pollfd(&_pfds[4 + 4*j], _children[i].fe, POLLOUT);
 		}
 
 		++j;
@@ -174,11 +169,26 @@ void Watchman::_fill_poll_fds()
 	_num_pfds = 1 + 4*_num_children_left();
 }
 
+void Watchman::_fill_single_pollfd(struct pollfd *pfd, File *f, int events)
+{
+	if ((WATCHMAN_FILE_STATE_STALE == f->state()) && f->can_reopen()) {
+		f->reopen();	/* Ignore error. */
+	}
+
+	if (unlikely(f->fileno() < 0)) {
+		return;
+	}
+
+	pfd->fd     = f->fileno();
+	pfd->events = events;
+
+}
+
 int Watchman::_poll()
 {
 	int err;
 
-	_fill_poll_fds();
+	_fill_pollfds();
 
 	err = poll(_pfds, _num_pfds, WATCHMAN_POLL_TIMEOUT);
 	if (unlikely(err < 0)) {

@@ -8,8 +8,11 @@
 #include "error.hxx"
 
 File::File(int fd)
-: _fd(fd), _can_reopen(false), _read_err(0), _write_err(0)
+: _state(WATCHMAN_FILE_STATE_CLOSED), _fd(fd), _can_reopen(false), _last_write_failed(0)
 {
+	if (fd >= 0) {
+		_state = WATCHMAN_FILE_STATE_HEALTHY;
+	}
 }
 
 long long File::read(void *buf, long long nbyte)
@@ -21,10 +24,7 @@ long long File::read(void *buf, long long nbyte)
 
 	x = ::read(_fd, buf, nbyte);
 	if (unlikely(x < 0)) {
-		if (0 == _read_err) {
-			WATCHMAN_ERROR("read() failed with errno %d: %s", errno, strerror(errno));
-		}
-		++_read_err;
+		WATCHMAN_ERROR("read() failed with errno %d: %s", errno, strerror(errno));
 
 		return -errno;
 	}
@@ -38,12 +38,30 @@ long long File::write(const void *buf, long long nbyte)
 
 	x = ::write(_fd, buf, nbyte);
 	if (unlikely(x < 0)) {
-		if (0 == _write_err) {
+		if (0 == _last_write_failed) {
 			WATCHMAN_ERROR("write() failed with errno %d: %s", errno, strerror(errno));
+			_last_write_failed = 1;
 		}
-		++_write_err;
+
+		if (WATCHMAN_FILE_STATE_HEALTHY == _state) {
+			WATCHMAN_WARN("File %p transitions from HEALTHY to UNHEALTY", this);
+			_state = WATCHMAN_FILE_STATE_UNHEALTHY;
+		}
+
+		if ((ENOTCONN == errno) || (ESTALE == errno)) {
+			if (WATCHMAN_FILE_STATE_STALE != _state) {
+				WATCHMAN_WARN("File %p transitions to STALE", this);
+			}
+			_state = WATCHMAN_FILE_STATE_STALE;
+		}
 
 		return -errno;
+	} else {
+		if (unlikely(WATCHMAN_FILE_STATE_STALE == _state)) {
+			WATCHMAN_WARN("Unexpected state transition STALE to HEALTHY for file %p", this);
+		}
+
+		_state = WATCHMAN_FILE_STATE_HEALTHY;
 	}
 
 	return x;

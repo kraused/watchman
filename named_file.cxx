@@ -37,6 +37,8 @@ int Named_File::open(const char *path, int oflags, int perms)
 		return -errno;
 	}
 
+	_state = WATCHMAN_FILE_STATE_HEALTHY;
+
 	return 0;
 }
 
@@ -63,6 +65,8 @@ int Named_File::reopen()
 		WATCHMAN_ERROR("lseek() failed with errno %d: %s", errno, strerror(errno));
 		return -errno;
 	}
+
+	_state = WATCHMAN_FILE_STATE_HEALTHY;
 
 	return 0;
 }
