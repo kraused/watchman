@@ -14,8 +14,6 @@ Named_File::Named_File()
 : File(-1), _oflags(0), _perms(0)
 {
 	memset(_path, 0, WATCHMAN_PATH_MAX_LEN);
-
-	_can_reopen = true;
 }
 
 int Named_File::open(const char *path, int oflags, int perms)
@@ -42,6 +40,11 @@ int Named_File::open(const char *path, int oflags, int perms)
 	return 0;
 }
 
+bool Named_File::can_reopen()
+{
+	return true;
+}
+
 int Named_File::reopen()
 {
 	int err;
@@ -51,7 +54,9 @@ int Named_File::reopen()
 		if (unlikely(err < 0)) {
 			WATCHMAN_ERROR("close() failed with errno %d: %s", errno, strerror(errno));
 		}
-		_fd = -1;
+
+		_fd    = -1;
+		_state = WATCHMAN_FILE_STATE_CLOSED;
 	}
 
 	_fd = ::open(_path, _oflags & (~O_TRUNC), _perms);
@@ -63,7 +68,13 @@ int Named_File::reopen()
 	err = ::lseek(_fd, 0, SEEK_END);
 	if (unlikely(err < 0)) {
 		WATCHMAN_ERROR("lseek() failed with errno %d: %s", errno, strerror(errno));
+		_state = WATCHMAN_FILE_STATE_UNHEALTHY;
+
 		return -errno;
+	}
+
+	if (likely(WATCHMAN_FILE_STATE_HEALTHY != _state)) {
+		WATCHMAN_WARN("File %p transitions to HEALTHY", this);
 	}
 
 	_state = WATCHMAN_FILE_STATE_HEALTHY;

@@ -8,7 +8,7 @@
 #include "error.hxx"
 
 File::File(int fd)
-: _state(WATCHMAN_FILE_STATE_CLOSED), _fd(fd), _can_reopen(false), _last_write_failed(0)
+: _state(WATCHMAN_FILE_STATE_CLOSED), _fd(fd), _last_write_failed(0)
 {
 	if (fd >= 0) {
 		_state = WATCHMAN_FILE_STATE_HEALTHY;
@@ -65,6 +65,11 @@ long long File::write(const void *buf, long long nbyte)
 	}
 
 	return x;
+}
+
+bool File::can_reopen()
+{
+	return false;	/* reopen() not implemented */
 }
 
 int File::reopen()

@@ -20,7 +20,8 @@ public:
 	int		open(const char *path, int oflags, int perms);
 
 protected:
-	virtual int	reopen();
+	virtual bool	can_reopen();
+	int		reopen();
 
 private:
 	char		_path[WATCHMAN_PATH_MAX_LEN];

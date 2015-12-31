@@ -34,6 +34,13 @@ protected:
 	int		_fd;
 
 public:
+			/* Returns true if a call to reopen() might be
+			 * attempted. can_reopen() might or might not be
+			 * pure and results from the call should not be
+			 * cached.
+			 */
+	virtual bool	can_reopen();
+
 			/* Function called to reopen the file if
 			 * an error, such as a stale file handle,
 			 * is detected.
@@ -41,12 +48,6 @@ public:
 			 * is true.
 			 */
 	virtual int	reopen();
-
-public:
-	bool		can_reopen() const;
-
-protected:
-	bool		_can_reopen;
 
 protected:
 	int		_last_write_failed;
@@ -61,11 +62,6 @@ inline int File::fileno() const
 inline int File::state() const
 {
 	return _state;
-}
-
-inline bool File::can_reopen() const
-{
-	return _can_reopen;
 }
 
 #endif

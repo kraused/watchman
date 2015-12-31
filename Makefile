@@ -7,8 +7,10 @@ LDFLAGS  = -fno-exceptions -fno-rtti -fPIC -Wl,-export-dynamic -O0 -ggdb
 LIBS     = -ldl
 
 OBJ   = main.o watchman.o plugin.o libc_alloc.o child.o program.o \
-        buffer.o file.o named_file.o initfini.o error.o
-TESTS = tests/test1.so tests/test2.so tests/test3.so tests/test4.so
+        buffer.o file.o named_file.o named_clingy_file.o initfini.o \
+        error.o
+TESTS = tests/test1.so tests/test2.so tests/test3.so \
+        tests/test4.so tests/test5.so tests/test6.so
 
 Q = @
 
@@ -29,7 +31,7 @@ tests/failfs/failfs.exe:
 
 %.so: %.o
 	$(Q)$(CXX) $(LDFLAGS) -shared -o $@ $<
-	@echo "CC  $@"
+	@echo "CXX $@"
 
 clean:
 	make -C tests/failfs clean

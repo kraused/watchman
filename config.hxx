@@ -40,7 +40,7 @@
 /* See also PATH_MAX in linux/limits.h
  */
 #undef  WATCHMAN_PATH_MAX_LEN
-#define WATCHMAN_PATH_MAX_LEN	512
+#define WATCHMAN_PATH_MAX_LEN	4096
 
 /* Number of lines in the buffer queue
  */
