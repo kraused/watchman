@@ -643,6 +643,21 @@ int Failfs::_handle_commands()
 			if (unlikely(err)) {
 				FAILFS_ERROR("remounting failed");
 			}
+			_state = FAILFS_STATE_NORMAL;
+			break;
+		case FAILFS_CMD_UMOUNT:
+			err = _thr.umount();
+			if (unlikely(err)) {
+				FAILFS_ERROR("unmounting failed");
+			}
+			_state = FAILFS_STATE_UMOUNTED;
+			break;
+		case FAILFS_CMD_MOUNT:
+			err = _thr.mount();
+			if (unlikely(err)) {
+				FAILFS_ERROR("mounting failed");
+			}
+			_state = FAILFS_STATE_NORMAL;
 			break;
 		case FAILFS_CMD_EXIT:
 			_exit_loop = 1;

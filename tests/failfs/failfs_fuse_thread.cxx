@@ -93,25 +93,7 @@ int Failfs_Fuse_Thread::init(const char *mountpoint, Failfs *fs)
 		FAILFS_ERROR("snprintf() failed: mountpoint truncated");
 	}
 
-	return _do_init();
-}
-
-int Failfs_Fuse_Thread::_do_init()
-{
-	int err;
-
-	err = failfs_fuse_init(_mountpoint, (void *)_fs);
-	if (unlikely(err)) {
-		FAILFS_ERROR("failfs_fuse_init() failed with error %d", err);
-		return err;
-	}
-
-	err = _create_pthread();
-	if (unlikely(err)) {
-		return err;
-	}
-
-	return 0;
+	return mount();
 }
 
 int Failfs_Fuse_Thread::fini()
@@ -140,15 +122,38 @@ int Failfs_Fuse_Thread::fini()
 	return err;
 }
 
+int Failfs_Fuse_Thread::mount()
+{
+	int err;
+
+	err = failfs_fuse_init(_mountpoint, (void *)_fs);
+	if (unlikely(err)) {
+		FAILFS_ERROR("failfs_fuse_init() failed with error %d", err);
+		return err;
+	}
+
+	err = _create_pthread();
+	if (unlikely(err)) {
+		return err;
+	}
+
+	return 0;
+}
+
+int Failfs_Fuse_Thread::umount()
+{
+	return fini();
+}
+
 int Failfs_Fuse_Thread::remount()
 {
 	int err;
 
-	err = fini();
+	err = umount();
 	if (unlikely(err))
 		return err;
 
-	err = _do_init();
+	err = mount();
 	if (unlikely(err))
 		return err;
 

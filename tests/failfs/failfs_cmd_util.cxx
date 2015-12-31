@@ -53,6 +53,12 @@ int main(int argc, char **argv)
 		if (!strcmp("remount", argv[1])) {
 			cmd = FAILFS_CMD_REMOUNT;
 		}
+		if (!strcmp("umount", argv[1])) {
+			cmd = FAILFS_CMD_UMOUNT;
+		}
+		if (!strcmp("mount", argv[1])) {
+			cmd = FAILFS_CMD_MOUNT;
+		}
 		if (!strcmp("exit", argv[1])) {
 			cmd = FAILFS_CMD_EXIT;
 		}

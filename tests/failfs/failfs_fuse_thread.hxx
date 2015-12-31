@@ -18,10 +18,9 @@ public:
 	int			init(const char *mountpoint, Failfs *fs);
 	int			fini();
 
-private:
-	int			_do_init();
-
 public:
+	int			mount();
+	int			umount();
 	int			remount();
 
 private:
