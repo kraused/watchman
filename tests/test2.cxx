@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "plugin.hxx"
+#include "alloc.hxx"
 #include "program.hxx"
 #include "buffer.hxx"
 #include "file.hxx"
@@ -29,7 +30,32 @@ class Test2_Program : public Program
 {
 
 public:
-			Test2_Program();
+			explicit Test2_Program();
+
+};
+
+class Test2_Plugin : public Watchman_Plugin
+{
+
+public:
+			explicit Test2_Plugin(void *handle, int version);
+
+public:
+	int		init(Watchman *w, int argc, char **argv);
+	int		fini();
+
+private:
+	Allocator	*_alloc;
+
+private:
+	Test2_Program	_proc;
+
+private:
+	Buffer		_buf;
+
+private:
+	File		*_fo;
+	File		*_fe;
 
 };
 
@@ -38,30 +64,43 @@ Test2_Program::Test2_Program()
 {
 }
 
-static Watchman_Plugin	plu;
-static Test2_Program	proc;
-static Buffer		buf;
-static File		fo(STDOUT_FILENO);
-static File		fe(STDERR_FILENO);
+Test2_Plugin::Test2_Plugin(void *handle, int version)
+: Watchman_Plugin(handle, version), _fo(NULL), _fe(NULL)
+{
+}
 
-int _init(Watchman *w, int argc, char **argv)
+int Test2_Plugin::init(Watchman *w, int argc, char **argv)
 {
 	int err;
 
-	err = w->add_child(&proc, &buf, &fo, &fe);
+	_alloc = w->alloc();
+
+	_fo = w->alloc()->create<File>(STDOUT_FILENO);
+	_fe = w->alloc()->create<File>(STDERR_FILENO);
+
+	err = w->add_child(&_proc, &_buf, _fo, _fe);
 	if (unlikely(err)) {
 		WATCHMAN_ERROR("Failed to add children to list: %d", err);
 		return err;
 	}
 
 	return 0;
-};
+}
 
-extern "C" Watchman_Plugin *entry()
+int Test2_Plugin::fini()
 {
-	plu.version = 1;
-	plu.init    = _init;
+	_fo = _alloc->destroy<File>(_fo);
+	_fe = _alloc->destroy<File>(_fe);
 
-	return &plu;
-};
+	return 0;
+}
+
+extern "C" Watchman_Plugin *entry(void *handle, Watchman *w)
+{
+	Allocator *alloc;
+
+	alloc = w->alloc();
+
+	return alloc->create<Test2_Plugin>(handle, 1);
+}
 

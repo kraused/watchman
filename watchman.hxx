@@ -7,6 +7,7 @@
 
 #include "config.hxx"
 
+class Allocator;
 class Child;
 class Buffer;
 class File;
@@ -26,11 +27,17 @@ class Watchman
 {
 
 public:
-			explicit Watchman();
+			explicit Watchman(Allocator *alloc);
 			~Watchman();
 
 public:
 	int		loop();
+
+public:
+	Allocator	*alloc();
+
+private:
+	Allocator	*_alloc;
 
 private:
 	int		_sfd;

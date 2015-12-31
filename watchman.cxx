@@ -12,8 +12,8 @@
 #include "buffer.hxx"
 #include "file.hxx"
 
-Watchman::Watchman()
-: _sfd(-1), _exit_phase(0)
+Watchman::Watchman(Allocator *alloc)
+: _alloc(alloc), _sfd(-1), _exit_phase(0)
 {
 	int i;
 
@@ -30,6 +30,11 @@ Watchman::~Watchman()
 {
 	/* Check that everything is nicely cleaned-up
 	 */
+}
+
+Allocator *Watchman::alloc()
+{
+	return _alloc;
 }
 
 int Watchman::init_signal_handling()

@@ -6,6 +6,8 @@ LD       = g++
 LDFLAGS  = -fno-exceptions -fno-rtti -fPIC -Wl,-export-dynamic -O0 -ggdb
 LIBS     = -ldl
 
+OBJ   = main.o watchman.o plugin.o libc_alloc.o child.o program.o \
+        buffer.o file.o named_file.o initfini.o error.o
 TESTS = tests/test1.so tests/test2.so tests/test3.so tests/test4.so
 
 Q = @
@@ -14,7 +16,7 @@ default: all
 
 all: watchman.exe tests/failfs/failfs.exe $(TESTS)
 
-watchman.exe: main.o watchman.o child.o program.o buffer.o file.o initfini.o error.o
+watchman.exe: $(OBJ)
 	$(Q)$(LD) $(LDFLAGS) -o $@ $^ $(LIBS)
 	@echo "LD  $@"
 

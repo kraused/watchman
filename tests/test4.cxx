@@ -6,9 +6,11 @@
 #include <errno.h>
 
 #include "plugin.hxx"
+#include "alloc.hxx"
 #include "program.hxx"
 #include "buffer.hxx"
 #include "file.hxx"
+#include "named_file.hxx"
 #include "watchman.hxx"
 #include "compiler.hxx"
 #include "error.hxx"
@@ -48,51 +50,89 @@ public:
 
 };
 
+class Test4_Plugin : public Watchman_Plugin
+{
+
+public:
+			explicit Test4_Plugin(void *handle, int version);
+
+public:
+	int		init(Watchman *w, int argc, char **argv);
+	int		fini();
+
+private:
+	Allocator	*_alloc;
+
+private:
+	Test4_Program	_proc;
+
+private:
+	Buffer		_buf;
+
+private:
+	File		*_fo;
+	File		*_fe;
+};
+
 Test4_Program::Test4_Program()
 : Program(_fill_argv())
 {
 }
 
-static Watchman_Plugin	plu;
-static Test4_Program	proc;
-static Buffer		buf;
-static File		fo(STDOUT_FILENO);
-static File		fe(STDERR_FILENO);
-
-int _init(Watchman *w, int argc, char **argv)
+Test4_Plugin::Test4_Plugin(void *handle, int version)
+: Watchman_Plugin(handle, version), _fo(NULL), _fe(NULL)
 {
+}
+
+int Test4_Plugin::init(Watchman *w, int argc, char **argv)
+{
+	Named_File *fd;
 	int err;
 
-	if (2 == argc) {
-		err = open(argv[0], O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
-		if (unlikely(err < 0)) {
-			WATCHMAN_ERROR("open() failed with errno %d: %s", errno, strerror(errno));
-			return -errno;
-		}
-		fo.replace_fd(err);
+	_alloc = w->alloc();
 
-		err = open(argv[1], O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
-		if (unlikely(err < 0)) {
-			WATCHMAN_ERROR("open() failed with errno %d: %s", errno, strerror(errno));
-			return -errno;
+	if (2 == argc) {
+		fd  = _alloc->create<Named_File>();
+		err = fd->open(argv[0], O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
+		if (unlikely(err)) {
+			return err;
 		}
-		fe.replace_fd(err);
+		_fo = fd;
+
+		fd  = _alloc->create<Named_File>();
+		err = fd->open(argv[1], O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
+		if (unlikely(err)) {
+			return err;
+		}
+		_fe = fd;
+	} else {
+		_fo = _alloc->create<File>(STDOUT_FILENO);
+		_fe = _alloc->create<File>(STDERR_FILENO);
 	}
 
-	err = w->add_child(&proc, &buf, &fo, &fe);
+	err = w->add_child(&_proc, &_buf, _fo, _fe);
 	if (unlikely(err)) {
 		WATCHMAN_ERROR("Failed to add children to list: %d", err);
 		return err;
 	}
 
 	return 0;
-};
+}
 
-extern "C" Watchman_Plugin *entry()
+int Test4_Plugin::fini()
 {
-	plu.version = 1;
-	plu.init    = _init;
+	_fo = _alloc->destroy<File>(_fo);
+	_fe = _alloc->destroy<File>(_fe);
 
-	return &plu;
+	return 0;
+}
+
+extern "C" Watchman_Plugin *entry(void *handle, Watchman *w)
+{
+	Allocator *alloc;
+
+	alloc = w->alloc();
+
+	return alloc->create<Test4_Plugin>(handle, 1);
 };
 
