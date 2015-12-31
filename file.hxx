@@ -9,14 +9,8 @@ public:
 			explicit File(int fd);
 
 public:
-			/* Get the file descriptor. */
-	inline int	fileno() const;
-
-public:
 	long long	read(void *buf, long long nbyte);
-
-public:
-	long long	write(const void *buf, long long nbyte);	
+	long long	write(const void *buf, long long nbyte);
 
 protected:
 			/* Function called to reopen the file if
@@ -27,11 +21,19 @@ protected:
 			 */
 	virtual int	reopen();
 
-private:
+protected:
 	int		_fd;
+
+public:
+			/* Get the file descriptor. */
+	inline int	fileno() const;
 
 protected:
 	bool		_can_reopen;
+
+protected:
+	long long	_read_err;
+	long long	_write_err;
 
 };
 

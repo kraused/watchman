@@ -37,6 +37,11 @@
 #undef	WATCHMAN_PROGRAM_MAX_ARGC
 #define WATCHMAN_PROGRAM_MAX_ARGC	16
 
+/* See also PATH_MAX in linux/limits.h
+ */
+#undef  WATCHMAN_PATH_MAX_LEN
+#define WATCHMAN_PATH_MAX_LEN	512
+
 /* Number of lines in the buffer queue
  */
 #undef  WATCHMAN_BUFFER_QUEUE_LEN
