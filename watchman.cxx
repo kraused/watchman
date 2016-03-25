@@ -45,13 +45,13 @@ int Watchman::init_signal_handling()
 	sigfillset(&all);
 	err = sigprocmask(SIG_BLOCK, &all, &_default_signal_set);
 	if (unlikely(err)) {
-		WATCHMAN_ERROR("Failed to block signals: %s", errno);
+		WATCHMAN_ERROR("Failed to block signals: %d (%s)", errno, strerror(errno));
 		return -errno;
 	}
 
 	_sfd = signalfd(-1, &all, 0);
 	if (unlikely(-1 == _sfd)) {
-		WATCHMAN_ERROR("Failed to open signalfd: %s", errno);
+		WATCHMAN_ERROR("Failed to open signalfd: %d (%s)", errno, strerror(errno));
 		return -errno;
 	}
 
@@ -192,7 +192,7 @@ int Watchman::_poll()
 
 	err = poll(_pfds, _num_pfds, WATCHMAN_POLL_TIMEOUT);
 	if (unlikely(err < 0)) {
-		WATCHMAN_ERROR("poll failed: %s", errno);
+		WATCHMAN_ERROR("poll failed: %d (%s)", errno, strerror(errno));
 		return -errno;
 	}
 

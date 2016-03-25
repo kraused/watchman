@@ -113,13 +113,13 @@ int Failfs::init_signal_handling()
 	sigfillset(&all);
 	err = sigprocmask(SIG_BLOCK, &all, &_default_signal_set);
 	if (unlikely(err)) {
-		FAILFS_ERROR("Failed to block signals: %s", errno);
+		FAILFS_ERROR("Failed to block signals: %d (%s)", errno, strerror(errno));
 		return -errno;
 	}
 
 	_sfd = signalfd(-1, &all, 0);
 	if (unlikely(-1 == _sfd)) {
-		FAILFS_ERROR("Failed to open signalfd: %s", errno);
+		FAILFS_ERROR("Failed to open signalfd: %d (%s)", errno, strerror(errno));
 		return -errno;
 	}
 
@@ -198,7 +198,7 @@ int Failfs::_poll()
 
 	err = poll(_pfds, _num_pfds, -1);
 	if (unlikely(err < 0)) {
-		FAILFS_ERROR("poll failed: %s", errno);
+		FAILFS_ERROR("poll failed: %d (%s)", errno, strerror(errno));
 		return -errno;
 	}
 

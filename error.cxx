@@ -47,7 +47,7 @@ void Error::_report(const char* prefix, const char* file, const char* func, long
 {
         vsnprintf(Error::_buf, sizeof(Error::_buf), fmt, vl);
 
-	fprintf(stderr, "<(%s(), %s:%ld> %s%s\n", func, file, line, prefix, Error::_buf);
+	fprintf(stderr, "<%s(), %s:%ld> %s%s\n", func, file, line, prefix, Error::_buf);
 	fflush (stderr);
 }
 
