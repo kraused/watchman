@@ -44,7 +44,8 @@ tar:
 	python2 tar.py watchman $(VERSION).$(PATCHLEVEL)
 
 # Header to install
-HEADER = config.hxx compiler.hxx error.hxx alloc.hxx watchman.hxx buffer.hxx child.hxx program.hxx \
+HEADER = watchman.hxx config.hxx compiler.hxx error.hxx alloc.hxx buffer.hxx \
+         child.hxx program.hxx plugin.hxx \
          file.hxx named_file.hxx named_clingy_file.hxx
 
 install:
