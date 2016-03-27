@@ -48,9 +48,9 @@ HEADER = config.hxx compiler.hxx error.hxx alloc.hxx watchman.hxx buffer.hxx chi
          file.hxx named_file.hxx named_clingy_file.hxx
 
 install:
-	install -m0755 -d $(PREFIX)/sbin/
+	install -m0755 -d $(PREFIX)/usr/sbin/
 	install -m0755 -d $(PREFIX)/usr/include/watchman/
-	install -m0755 watchman.exe		$(PREFIX)/sbin/watchman.exe
+	install -m0755 watchman.exe		$(PREFIX)/usr/sbin/watchman.exe
 	for H in $(HEADER); do								\
 		install -m0644 watchman/$${H}	$(PREFIX)/usr/include/watchman/$${H} ;	\
 	done

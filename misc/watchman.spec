@@ -1,7 +1,9 @@
 
+%define with_failfs	1
+
 # We follow the Fedora naming scheme:
 # https://fedoraproject.org/wiki/Packaging:NamingGuidelines?rd=Packaging/NamingGuidelines#NonNumericRelease
-%define checkout	20160327gite362e14
+%define checkout	20160327gitd2e59e6
 
 Name:		watchman
 Version:	1.0
@@ -26,18 +28,36 @@ Requires:	watchman = %{version}
 Development headers for writing watchman plugins/wrapper for
 applications.
 
+%if %{with_failfs}
+%package failfs
+Summary:	Watchman I/O manager failfs test filesystem
+Group:		System Environment/Base
+Requires:	fuse
+BuildRequires:	fuse-devel
+
+%description failfs
+Failfs test filesystem
+%endif
+
 %prep
 %setup -q -n %{name}-%{version}-%{checkout}
 
 %build
 make watchman.exe
+%if %{with_failfs}
+make tests/failfs/failfs.exe
+%endif
 
 %install
 make PREFIX=%{buildroot} install
+%if %{with_failfs}
+install -m0755 tests/failfs/failfs.exe		%{buildroot}/usr/sbin/failfs.exe
+install -m0755 tests/failfs/failfs_cmd_util.exe	%{buildroot}/usr/sbin/failfs_cmd_util.exe
+%endif
 
 %files
 %defattr(-,root,root)
-/sbin/watchman.exe
+/usr/sbin/watchman.exe
 
 %files devel
 %defattr(-,root,root)
@@ -54,4 +74,11 @@ make PREFIX=%{buildroot} install
 /usr/include/watchman/named_file.hxx
 /usr/include/watchman/program.hxx
 /usr/include/watchman/watchman.hxx
+
+%if %{with_failfs}
+%files failfs
+%defattr(-,root,root)
+/usr/sbin/failfs.exe
+/usr/sbin/failfs_cmd_util.exe
+%endif
 
