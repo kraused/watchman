@@ -136,7 +136,7 @@ int Watchman::loop()
 			_exit_phase = WATCHMAN_EXIT_PHASE_QUIT;
 	}
 
-	return -1;
+	return 0;
 }
 
 void Watchman::_fill_pollfds()
