@@ -1,4 +1,7 @@
 
+VERSION    = 1
+PATCHLEVEL = 0
+
 CXX      = g++
 CPPFLAGS = -I. -D_GNU_SOURCE
 CXXFLAGS = -fno-exceptions -fno-rtti -fPIC -Wall -O0 -ggdb
@@ -32,6 +35,9 @@ tests/failfs/failfs.exe:
 %.so: %.o
 	$(Q)$(CXX) $(LDFLAGS) -shared -o $@ $<
 	@echo "CXX $@"
+
+tar:
+	python2 tar.py watchman $(VERSION).$(PATCHLEVEL)
 
 clean:
 	make -C tests/failfs clean
