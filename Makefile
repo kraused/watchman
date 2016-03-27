@@ -43,6 +43,18 @@ tests/%.o: tests/%.cxx
 tar:
 	python2 tar.py watchman $(VERSION).$(PATCHLEVEL)
 
+# Header to install
+HEADER = config.hxx compiler.hxx error.hxx alloc.hxx watchman.hxx buffer.hxx child.hxx program.hxx \
+         file.hxx named_file.hxx named_clingy_file.hxx
+
+install:
+	install -m0755 -d $(PREFIX)/sbin/
+	install -m0755 -d $(PREFIX)/usr/include/watchman/
+	install -m0755 watchman.exe		$(PREFIX)/sbin/watchman.exe
+	for H in $(HEADER); do								\
+		install -m0644 watchman/$${H}	$(PREFIX)/usr/include/watchman/$${H} ;	\
+	done
+
 clean:
 	make -C tests/failfs clean
 	-rm -f tests/*.o tests/*.so *.o watchman.exe

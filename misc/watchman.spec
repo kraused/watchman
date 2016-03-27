@@ -1,7 +1,7 @@
 
 # We follow the Fedora naming scheme:
 # https://fedoraproject.org/wiki/Packaging:NamingGuidelines?rd=Packaging/NamingGuidelines#NonNumericRelease
-%define checkout	20160327gitab2ae69
+%define checkout	20160327gite362e14
 
 Name:		watchman
 Version:	1.0
@@ -33,7 +33,7 @@ applications.
 make watchman.exe
 
 %install
-install -D -m755 watchman.exe %buildroot/sbin/watchman.exe
+make PREFIX=%{buildroot} install
 
 %files
 %defattr(-,root,root)
@@ -41,4 +41,17 @@ install -D -m755 watchman.exe %buildroot/sbin/watchman.exe
 
 %files devel
 %defattr(-,root,root)
+%dir %attr(0755,root,root)
+%dir /usr/include/watchman
+/usr/include/watchman/alloc.hxx
+/usr/include/watchman/buffer.hxx
+/usr/include/watchman/child.hxx
+/usr/include/watchman/compiler.hxx
+/usr/include/watchman/config.hxx
+/usr/include/watchman/error.hxx
+/usr/include/watchman/file.hxx
+/usr/include/watchman/named_clingy_file.hxx
+/usr/include/watchman/named_file.hxx
+/usr/include/watchman/program.hxx
+/usr/include/watchman/watchman.hxx
 
