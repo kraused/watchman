@@ -5,7 +5,7 @@
 #include <signal.h>
 #include <poll.h>
 
-#include "config.hxx"
+#include "watchman/config.hxx"
 
 class Allocator;
 class Child;

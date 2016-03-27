@@ -2,7 +2,7 @@
 #ifndef WATCHMAN_LIBC_ALLOC_HXX_INCLUDED
 #define WATCHMAN_LIBC_ALLOC_HXX_INCLUDED 1
 
-#include "alloc.hxx"
+#include "watchman/alloc.hxx"
 
 class Libc_Allocator : public Allocator
 {

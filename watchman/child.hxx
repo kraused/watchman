@@ -2,7 +2,7 @@
 #ifndef WATCHMAN_CHILD_HXX_INCLUDED
 #define WATCHMAN_CHILD_HXX_INCLUDED 1
 
-#include "file.hxx"
+#include "watchman/file.hxx"
 
 class Child
 {

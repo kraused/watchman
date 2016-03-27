@@ -28,7 +28,11 @@ watchman.exe: $(OBJ)
 tests/failfs/failfs.exe:
 	make -C tests/failfs
 
-%.o: %.cxx
+%.o: watchman/%.cxx
+	$(Q)$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ -c $<
+	@echo "CXX $@"
+
+tests/%.o: tests/%.cxx
 	$(Q)$(CXX) $(CPPFLAGS) $(CXXFLAGS) -o $@ -c $<
 	@echo "CXX $@"
 

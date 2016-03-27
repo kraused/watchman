@@ -4,7 +4,7 @@
 
 #include <new>
 
-#include "compiler.hxx"
+#include "watchman/compiler.hxx"
 
 class Allocator
 {

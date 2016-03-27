@@ -2,8 +2,8 @@
 #ifndef WATCHMAN_NAMED_FILE_HXX_INCLUDED
 #define WATCHMAN_NAMED_FILE_HXX_INCLUDED 1
 
-#include "config.hxx"
-#include "file.hxx"
+#include "watchman/config.hxx"
+#include "watchman/file.hxx"
 
 /* File with an associated path on the filesystem. Instances of Named_File can be reopened.
  */

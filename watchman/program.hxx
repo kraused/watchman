@@ -2,8 +2,8 @@
 #ifndef WATCHMAN_PROGRAM_HXX_INCLUDED
 #define WATCHMAN_PROGRAM_HXX_INCLUDED 1
 
-#include "config.hxx"
-#include "child.hxx"
+#include "watchman/config.hxx"
+#include "watchman/child.hxx"
 
 class Program : public Child
 {

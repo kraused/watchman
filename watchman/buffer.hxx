@@ -2,7 +2,7 @@
 #ifndef WATCHMAN_BUFFER_HXX_INCLUDED
 #define WATCHMAN_BUFFER_HXX_INCLUDED 1
 
-#include "config.hxx"
+#include "watchman/config.hxx"
 
 struct File;
 

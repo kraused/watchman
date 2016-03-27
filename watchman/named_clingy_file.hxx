@@ -2,8 +2,8 @@
 #ifndef WATCHMAN_CLINGY_NAMED_FILE_HXX_INCLUDED
 #define WATCHMAN_CLINGY_NAMED_FILE_HXX_INCLUDED 1
 
-#include "config.hxx"
-#include "named_file.hxx"
+#include "watchman/config.hxx"
+#include "watchman/named_file.hxx"
 
 /* File with an associated path on a filesystem. In contrast to Named_File instances
  * of Named_Clingy_File are associated with a particular filesystem and mountpoint and

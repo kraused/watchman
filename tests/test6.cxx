@@ -5,15 +5,15 @@
 #include <fcntl.h>
 #include <errno.h>
 
-#include "plugin.hxx"
-#include "alloc.hxx"
-#include "program.hxx"
-#include "buffer.hxx"
-#include "file.hxx"
-#include "named_clingy_file.hxx"
-#include "watchman.hxx"
-#include "compiler.hxx"
-#include "error.hxx"
+#include "watchman/plugin.hxx"
+#include "watchman/alloc.hxx"
+#include "watchman/program.hxx"
+#include "watchman/buffer.hxx"
+#include "watchman/file.hxx"
+#include "watchman/named_clingy_file.hxx"
+#include "watchman/watchman.hxx"
+#include "watchman/compiler.hxx"
+#include "watchman/error.hxx"
 
 static char _producer[6][WATCHMAN_PROGRAM_MAX_ARGV_STRLEN + 1];
 static char *_argv[7];
