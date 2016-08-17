@@ -40,7 +40,7 @@ static int _send_fuse_cmd_and_recv(int cmd, const char *path)
 	if (unlikely(err))
 		return err;
 
-	if (unlikely(fuse_err));
+	if (unlikely(fuse_err))
 		return fuse_err;
 
 	return 0;
