@@ -32,8 +32,10 @@ static const char *_state_to_string(int state)
 		return "UNHEALTHY";
 		break;
 	case WATCHMAN_FILE_STATE_STALE:
+		return "STALE";
+		break;
 	default:
-		WATCHMAN_ERROR("Unknown state %s in _state_to_string().", state);
+		WATCHMAN_ERROR("Unknown state %d in _state_to_string().", state);
 	}
 
 	return "";
