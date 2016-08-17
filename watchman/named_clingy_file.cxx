@@ -221,9 +221,10 @@ bool Named_Clingy_File::_filesystem_is_mounted()
 	}
 
 	err = _compare_until_whitespace(fd, _fstype, WATCHMAN_FILESYSTEM_MAX_NAME_LEN);
-	if (unlikely(err))
+	if (unlikely(err)) {
 		mounted = false;
 		goto exit;
+	}
 
 	err = _compare_until_whitespace(fd, _source, WATCHMAN_PATH_MAX_LEN);
 	if (unlikely(err)) {
