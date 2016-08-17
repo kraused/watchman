@@ -171,11 +171,22 @@ void Watchman::_fill_pollfds()
 
 void Watchman::_fill_single_pollfd(struct pollfd *pfd, File *f, int events)
 {
-	if ((WATCHMAN_FILE_STATE_STALE == f->state()) && f->can_reopen()) {
-		f->reopen();	/* Ignore error. */
+	if (unlikely(WATCHMAN_FILE_STATE_HEALTHY != f->state())) {
+		if (f->can_reopen()) {
+			f->reopen();	/* Ignore error. */
+		}
+	}
+
+	if (unlikely(WATCHMAN_FILE_STATE_HEALTHY != f->state())) {
+		return;
 	}
 
 	if (unlikely(f->fileno() < 0)) {
+		/* Something went terribly wrong. This is a bug.
+		 */
+
+		WATCHMAN_ERROR("File %p is HEALTHY but fileno is %d.", f, f->fileno());
+		f->force_different_state(WATCHMAN_FILE_STATE_UNHEALTHY);
 		return;
 	}
 

@@ -7,6 +7,39 @@
 #include "compiler.hxx"
 #include "error.hxx"
 
+/*
+static const char *_state_names[] =
+{
+	[WATCHMAN_FILE_STATE_CLOSED] = "CLOSED",
+	[WATCHMAN_FILE_STATE_HEALTHY] = "HEALTHY",
+	[WATCHMAN_FILE_STATE_UNHEALTHY] = "UNHEALTHY",
+	[WATCHMAN_FILE_STATE_STALE] = "STALE"
+};
+*/
+
+static const char *_state_to_string(int state)
+{
+	/* No non-trivial designated initializers supported so we go for this:
+	 */
+	switch (state) {
+	case WATCHMAN_FILE_STATE_CLOSED:
+		return "CLOSED";
+		break;
+	case WATCHMAN_FILE_STATE_HEALTHY:
+		return "HEALTHY";
+		break;
+	case WATCHMAN_FILE_STATE_UNHEALTHY:
+		return "UNHEALTHY";
+		break;
+	case WATCHMAN_FILE_STATE_STALE:
+	default:
+		WATCHMAN_ERROR("Unknown state %s in _state_to_string().", state);
+	}
+
+	return "";
+}
+
+
 File::File(int fd)
 : _state(WATCHMAN_FILE_STATE_CLOSED), _fd(fd), _last_write_failed(0)
 {
@@ -44,13 +77,15 @@ long long File::write(const void *buf, long long nbyte)
 		}
 
 		if (WATCHMAN_FILE_STATE_HEALTHY == _state) {
-			WATCHMAN_WARN("File %p transitions from HEALTHY to UNHEALTY", this);
+			WATCHMAN_WARN("File %p transitions from %s to %s", this,
+				_state_to_string(_state), _state_to_string(WATCHMAN_FILE_STATE_UNHEALTHY));
 			_state = WATCHMAN_FILE_STATE_UNHEALTHY;
 		}
 
 		if ((ENOTCONN == errno) || (ESTALE == errno)) {
 			if (WATCHMAN_FILE_STATE_STALE != _state) {
-				WATCHMAN_WARN("File %p transitions to STALE", this);
+				WATCHMAN_WARN("File %p transitions from %s to %s", this,
+					_state_to_string(_state), _state_to_string(WATCHMAN_FILE_STATE_STALE));
 			}
 			_state = WATCHMAN_FILE_STATE_STALE;
 		}
@@ -58,7 +93,8 @@ long long File::write(const void *buf, long long nbyte)
 		return -errno;
 	} else {
 		if (unlikely(WATCHMAN_FILE_STATE_STALE == _state)) {
-			WATCHMAN_WARN("Unexpected state transition STALE to HEALTHY for file %p", this);
+			WATCHMAN_WARN("Unexpected state transition %s to %s for file %p",
+				_state_to_string(_state), _state_to_string(WATCHMAN_FILE_STATE_HEALTHY), this);
 		}
 
 		_state = WATCHMAN_FILE_STATE_HEALTHY;
@@ -75,5 +111,20 @@ bool File::can_reopen()
 int File::reopen()
 {
 	return -1;
+}
+
+void File::force_different_state(int state)
+{
+	if (unlikely((WATCHMAN_FILE_STATE_CLOSED    != state) &&
+	             (WATCHMAN_FILE_STATE_HEALTHY   != state) &&
+	             (WATCHMAN_FILE_STATE_UNHEALTHY != state) &&
+	             (WATCHMAN_FILE_STATE_STALE     != state))) {
+		WATCHMAN_ERROR("Rejecting attempt to set file %f state to unknown %d.", this, state);
+	}
+
+	WATCHMAN_WARN("Forcing state transition %s to %s for file %p. "
+	              "This indicates an application bug.", _state_to_string(_state), _state_to_string(state), this);
+
+	_state = state;
 }
 

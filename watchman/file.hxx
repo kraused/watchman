@@ -4,10 +4,10 @@
 
 enum
 {
-	WATCHMAN_FILE_STATE_CLOSED,
-	WATCHMAN_FILE_STATE_HEALTHY,
-	WATCHMAN_FILE_STATE_UNHEALTHY,
-	WATCHMAN_FILE_STATE_STALE
+	WATCHMAN_FILE_STATE_CLOSED	= 1,
+	WATCHMAN_FILE_STATE_HEALTHY	= 2,
+	WATCHMAN_FILE_STATE_UNHEALTHY	= 3,
+	WATCHMAN_FILE_STATE_STALE	= 4
 };
 
 class File
@@ -51,6 +51,12 @@ public:
 
 protected:
 	int		_last_write_failed;
+
+public:
+			/* Force a different file state. This should not be necessary and
+			 * probably indicates a bug.
+			 */
+	void		force_different_state(int state);
 
 };
 
