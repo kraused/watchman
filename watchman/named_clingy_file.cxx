@@ -64,7 +64,7 @@ static int _copy_until_whitespace(int fd, char *str, long long len)
 	return -1;
 }
 
-static int _compare_until_whitespace(int fd, char *str, long long len)
+static int _compare_content(int fd, char *str, long long len)
 {
 	long long i;
 	char c;
@@ -84,6 +84,28 @@ static int _compare_until_whitespace(int fd, char *str, long long len)
 
 		if (c != str[i])
 			return 1;
+	}
+
+	return -1;
+}
+
+static int _skip_whitespace(int fd)
+{
+	char c;
+	int err;
+
+	err = read(fd, &c, 1);
+	if (0 == err) {
+		WATCHMAN_ERROR("read() returned zero.");
+		return -1;
+	}
+	if (unlikely(err < 0)) {
+		WATCHMAN_ERROR("read() failed with errno %d: %s", errno, strerror(errno));
+		return -1;
+	}
+
+	if (' ' == c) {
+		return 0;
 	}
 
 	return -1;
@@ -220,13 +242,19 @@ bool Named_Clingy_File::_filesystem_is_mounted()
 		goto exit;
 	}
 
-	err = _compare_until_whitespace(fd, _fstype, WATCHMAN_FILESYSTEM_MAX_NAME_LEN);
+	err = _compare_content(fd, _fstype, WATCHMAN_FILESYSTEM_MAX_NAME_LEN);
 	if (unlikely(err)) {
 		mounted = false;
 		goto exit;
 	}
 
-	err = _compare_until_whitespace(fd, _source, WATCHMAN_PATH_MAX_LEN);
+	err = _skip_whitespace(fd);
+	if (unlikely(err)) {
+		mounted = false;
+		goto exit;
+	}
+
+	err = _compare_content(fd, _source, WATCHMAN_PATH_MAX_LEN);
 	if (unlikely(err)) {
 		mounted = false;
 		goto exit;
