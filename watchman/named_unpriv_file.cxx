@@ -13,6 +13,15 @@ int _set_effective_ids(uid_t uid, gid_t gid)
 {
 	int err;
 
+	if (getegid() != gid) {
+		err = setegid(gid);
+		if (unlikely(err < 0)) {
+			WATCHMAN_ERROR("setegid() failed with errno %d: %s", errno, strerror(errno));
+			if (stop_on_error) {
+				return -1;
+			}
+		}
+	}
 	if (geteuid() != uid) {
 		err = seteuid(uid);
 		if (unlikely(err < 0)) {
@@ -22,15 +31,6 @@ int _set_effective_ids(uid_t uid, gid_t gid)
 			}
 		}
 	}
-	if (getegid() != gid) {
-		err = setegid(gid);
-		if (unlikely(err < 0)) {
-			WATCHMAN_ERROR("setegid() failed with errno %d: %s", errno, strerror(errno));
-			if (stop_on_error) {
-				return -1;
-			}
-		}
-	}	
 
 	return 0;
 }
