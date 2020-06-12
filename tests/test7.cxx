@@ -10,7 +10,7 @@
 #include "watchman/program.hxx"
 #include "watchman/buffer.hxx"
 #include "watchman/file.hxx"
-#include "watchman/named_unpriv_file.hxx"
+#include "watchman/named_clingy_file.hxx"
 #include "watchman/watchman.hxx"
 #include "watchman/compiler.hxx"
 #include "watchman/error.hxx"
@@ -25,7 +25,7 @@ static char **_fill_argv()
 	strcpy(_producer[2], "1-200");	/* line length variation */
 	strcpy(_producer[3], "1-10");	/* number of lines written at once */
 	strcpy(_producer[4], "10");	/* output frequency [Hz] */
-	strcpy(_producer[5], "tests/test5.copy");
+	strcpy(_producer[5], "tests/test7.copy");
 
 	_argv[0] = _producer[0];
 	_argv[1] = _producer[1];
@@ -38,72 +38,72 @@ static char **_fill_argv()
 	return _argv;
 }
 
-class Test5_Program : public Program
+class Test7_Program : public Program
 {
 
 public:
-			Test5_Program();
+				Test7_Program();
 
 };
 
-class Test5_Plugin : public Watchman_Plugin
+class Test7_Plugin : public Watchman_Plugin
 {
 
 public:
-			explicit Test5_Plugin(void *handle, int version);
+				explicit Test7_Plugin(void *handle, int version);
 
 public:
-	int		init(Watchman *w, int argc, char **argv);
-	int		fini();
+	int			init(Watchman *w, int argc, char **argv);
+	int			fini();
 
 private:
-	Allocator	*_alloc;
+	Allocator		*_alloc;
 
 private:
-	Test5_Program	_proc;
+	Test7_Program		_proc;
 
 private:
-	Buffer		_buf;
+	Buffer			_buf;
 
 private:
-	File		*_fo;
-	File		*_fe;
+	Named_Clingy_File	*_fo;
+	Named_Clingy_File	*_fe;
 };
 
-Test5_Program::Test5_Program()
+Test7_Program::Test7_Program()
 : Program(_fill_argv())
 {
 }
 
-Test5_Plugin::Test5_Plugin(void *handle, int version)
+Test7_Plugin::Test7_Plugin(void *handle, int version)
 : Watchman_Plugin(handle, version), _fo(NULL), _fe(NULL)
 {
 }
 
-int Test5_Plugin::init(Watchman *w, int argc, char **argv)
+int Test7_Plugin::init(Watchman *w, int argc, char **argv)
 {
-	Named_Unpriv_File *fd;
 	int err;
 
 	_alloc = w->alloc();
 
-	if (2 == argc) {
-		fd  = _alloc->create<Named_Unpriv_File>(1000, 100);
-		err = fd->open(argv[0], O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
-		if (unlikely(err)) {
-			return err;
-		}
-		_fo = fd;
+	_fo = _alloc->create<Named_Clingy_File>();
+	err = _fo->attach(argv[0]);
+	if (unlikely(err)) {
+		return err;
+	}
+	err = _fo->open(argv[1], O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
+	if (unlikely(err)) {
+		return err;
+	}
 
-		fd  = _alloc->create<Named_Unpriv_File>(1000, 100);
-		err = fd->open(argv[1], O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
-		if (unlikely(err)) {
-			return err;
-		}
-		_fe = fd;
-	} else {
-		_fo = _alloc->create<File>(STDOUT_FILENO);
-		_fe = _alloc->create<File>(STDERR_FILENO);
+	_fe = _alloc->create<Named_Clingy_File>();
+	err = _fe->attach(argv[0]);
+	if (unlikely(err)) {
+		return err;
+	}
+	err = _fe->open(argv[2], O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
+	if (unlikely(err)) {
+		return err;
 	}
 
 	err = w->add_child(&_proc, &_buf, _fo, _fe);
@@ -115,10 +115,10 @@ int Test5_Plugin::init(Watchman *w, int argc, char **argv)
 	return 0;
 }
 
-int Test5_Plugin::fini()
+int Test7_Plugin::fini()
 {
-	_fo = _alloc->destroy<File>(_fo);
-	_fe = _alloc->destroy<File>(_fe);
+	_fo = _alloc->destroy<Named_Clingy_File>(_fo);
+	_fe = _alloc->destroy<Named_Clingy_File>(_fe);
 
 	return 0;
 }
@@ -129,6 +129,6 @@ extern "C" Watchman_Plugin *entry(void *handle, Watchman *w)
 
 	alloc = w->alloc();
 
-	return alloc->create<Test5_Plugin>(handle, 1);
+	return alloc->create<Test7_Plugin>(handle, 1);
 }
 

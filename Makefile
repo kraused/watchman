@@ -14,7 +14,8 @@ OBJ   = main.o watchman.o plugin.o libc_alloc.o child.o program.o \
         clingy_file.o named_clingy_file.o named_unpriv_clingy_file.o \
         initfini.o error.o
 TESTS = tests/test1.so tests/test2.so tests/test3.so \
-        tests/test4.so tests/test5.so tests/test6.so
+        tests/test4.so tests/test5.so tests/test6.so \
+        tests/test7.so tests/test8.so
 
 Q = @
 
