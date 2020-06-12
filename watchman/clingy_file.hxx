@@ -5,8 +5,8 @@
 #include "watchman/config.hxx"
 #include "watchman/named_file.hxx"
 
-/* File with an associated path on a filesystem. In contrast to Named_File instances
- * of Named_Clingy_File are associated with a particular filesystem and mountpoint and
+/* File with an associated path on a filesystem. In contrast to File_Type instances
+ * of Clingy_File are associated with a particular filesystem and mountpoint and
  * will not allow reopening if that filesystem is not mounted where it is expected.
  */
 template<class File_Type>

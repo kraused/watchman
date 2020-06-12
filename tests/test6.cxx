@@ -15,6 +15,8 @@
 #include "watchman/compiler.hxx"
 #include "watchman/error.hxx"
 
+#include "tests/utils.hxx"
+
 static char _producer[6][WATCHMAN_PROGRAM_MAX_ARGV_STRLEN + 1];
 static char *_argv[7];
 
@@ -88,19 +90,25 @@ int Test6_Plugin::init(Watchman *w, int argc, char **argv)
 {
 	Named_Unpriv_File *fd;
 	int err;
+	int uid, gid;
 
 	_alloc = w->alloc();
 
-	if (2 == argc) {
-		fd  = _alloc->create<Named_Unpriv_File>(1000, 100);
-		err = fd->open(argv[0], O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
+	if (3 == argc) {
+		err = get_uid_and_gid(argv[0], &uid, &gid);
+		if (unlikely(err)) {
+			return err;
+		}
+
+		fd  = _alloc->create<Named_Unpriv_File>(uid, gid);
+		err = fd->open(argv[1], O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
 		if (unlikely(err)) {
 			return err;
 		}
 		_fo = fd;
 
-		fd  = _alloc->create<Named_Unpriv_File>(1000, 100);
-		err = fd->open(argv[1], O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
+		fd  = _alloc->create<Named_Unpriv_File>(uid, gid);
+		err = fd->open(argv[2], O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
 		if (unlikely(err)) {
 			return err;
 		}
