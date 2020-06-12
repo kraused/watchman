@@ -203,7 +203,7 @@ bool _clingy_file_attach(const char *arg, char *mountpoint, char *fstype, char *
 	return 0;
 }
 
-bool _cling_file_filesystem_is_mounted(const char *mountpoint, const char *fstype, const char *source)
+bool _clingy_file_filesystem_is_mounted(const char *mountpoint, const char *fstype, const char *source)
 {
 	int err;
 	int tmp;
