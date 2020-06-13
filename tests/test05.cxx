@@ -10,11 +10,12 @@
 #include "watchman/program.hxx"
 #include "watchman/buffer.hxx"
 #include "watchman/file.hxx"
-#include "watchman/named_file.hxx"
-#include "watchman/size_rotator.hxx"
+#include "watchman/named_unpriv_file.hxx"
 #include "watchman/watchman.hxx"
 #include "watchman/compiler.hxx"
 #include "watchman/error.hxx"
+
+#include "tests/utils.hxx"
 
 static char _producer[6][WATCHMAN_PROGRAM_MAX_ARGV_STRLEN + 1];
 static char *_argv[7];
@@ -26,7 +27,7 @@ static char **_fill_argv()
 	strcpy(_producer[2], "1-200");	/* line length variation */
 	strcpy(_producer[3], "1-10");	/* number of lines written at once */
 	strcpy(_producer[4], "10");	/* output frequency [Hz] */
-	strcpy(_producer[5], "tests/test9.copy");
+	strcpy(_producer[5], "tests/test05.copy");
 
 	_argv[0] = _producer[0];
 	_argv[1] = _producer[1];
@@ -39,19 +40,19 @@ static char **_fill_argv()
 	return _argv;
 }
 
-class Test9_Program : public Program
+class Test05_Program : public Program
 {
 
 public:
-			Test9_Program();
+			Test05_Program();
 
 };
 
-class Test9_Plugin : public Watchman_Plugin
+class Test05_Plugin : public Watchman_Plugin
 {
 
 public:
-			explicit Test9_Plugin(void *handle, int version);
+			explicit Test05_Plugin(void *handle, int version);
 
 public:
 	int		init(Watchman *w, int argc, char **argv);
@@ -61,7 +62,7 @@ private:
 	Allocator	*_alloc;
 
 private:
-	Test9_Program	_proc;
+	Test05_Program	_proc;
 
 private:
 	Buffer		_buf;
@@ -69,38 +70,41 @@ private:
 private:
 	File		*_fo;
 	File		*_fe;
-
-private:
-	Size_Rotator	*_rot;
 };
 
-Test9_Program::Test9_Program()
+Test05_Program::Test05_Program()
 : Program(_fill_argv())
 {
 }
 
-Test9_Plugin::Test9_Plugin(void *handle, int version)
+Test05_Plugin::Test05_Plugin(void *handle, int version)
 : Watchman_Plugin(handle, version), _fo(nullptr), _fe(nullptr)
 {
 }
 
-int Test9_Plugin::init(Watchman *w, int argc, char **argv)
+int Test05_Plugin::init(Watchman *w, int argc, char **argv)
 {
-	Named_File *fd;
+	Named_Unpriv_File *fd;
 	int err;
+	int uid, gid;
 
 	_alloc = w->alloc();
 
-	if (2 == argc) {
-		fd  = _alloc->create<Named_File>();
-		err = fd->open(argv[0], O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
+	if (3 == argc) {
+		err = get_uid_and_gid(argv[0], &uid, &gid);
+		if (unlikely(err)) {
+			return err;
+		}
+
+		fd  = _alloc->create<Named_Unpriv_File>(uid, gid);
+		err = fd->open(argv[1], O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
 		if (unlikely(err)) {
 			return err;
 		}
 		_fo = fd;
 
-		fd  = _alloc->create<Named_File>();
-		err = fd->open(argv[1], O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
+		fd  = _alloc->create<Named_Unpriv_File>(uid, gid);
+		err = fd->open(argv[2], O_CREAT | O_WRONLY | O_TRUNC, S_IRUSR | S_IWUSR);
 		if (unlikely(err)) {
 			return err;
 		}
@@ -110,9 +114,7 @@ int Test9_Plugin::init(Watchman *w, int argc, char **argv)
 		_fe = _alloc->create<File>(STDERR_FILENO);
 	}
 
-	_rot = _alloc->create<Size_Rotator>(16*1024L);
-
-	err = w->add_child(&_proc, &_buf, _fo, _fe, _rot);
+	err = w->add_child(&_proc, &_buf, _fo, _fe, nullptr);
 	if (unlikely(err)) {
 		WATCHMAN_ERROR("Failed to add children to list: %d", err);
 		return err;
@@ -121,11 +123,8 @@ int Test9_Plugin::init(Watchman *w, int argc, char **argv)
 	return 0;
 }
 
-int Test9_Plugin::fini()
+int Test05_Plugin::fini()
 {
-	WATCHMAN_LOG("output file size = %lld", _fo->size());
-	WATCHMAN_LOG("error  file size = %lld", _fe->size());
-
 	_fo = _alloc->destroy<File>(_fo);
 	_fe = _alloc->destroy<File>(_fe);
 
@@ -138,6 +137,6 @@ extern "C" Watchman_Plugin *entry(void *handle, Watchman *w)
 
 	alloc = w->alloc();
 
-	return alloc->create<Test9_Plugin>(handle, 1);
+	return alloc->create<Test05_Plugin>(handle, 1);
 }
 

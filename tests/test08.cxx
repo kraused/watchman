@@ -20,12 +20,16 @@ static char *_argv[7];
 
 static char **_fill_argv()
 {
+	/* Write a large number of lines at once to make sure that
+	 * output that is still pending when the child terminates
+	 * is correctly read.
+	 */
 	strcpy(_producer[0], "tests/producer");
-	strcpy(_producer[1], "100");	/* number of rounds */
+	strcpy(_producer[1], "1");	/* number of rounds */
 	strcpy(_producer[2], "1-200");	/* line length variation */
-	strcpy(_producer[3], "1-10");	/* number of lines written at once */
+	strcpy(_producer[3], "1000");	/* number of lines written at once */
 	strcpy(_producer[4], "10");	/* output frequency [Hz] */
-	strcpy(_producer[5], "tests/test7.copy");
+	strcpy(_producer[5], "tests/test08.copy");
 
 	_argv[0] = _producer[0];
 	_argv[1] = _producer[1];
@@ -38,19 +42,19 @@ static char **_fill_argv()
 	return _argv;
 }
 
-class Test7_Program : public Program
+class Test08_Program : public Program
 {
 
 public:
-				Test7_Program();
+				Test08_Program();
 
 };
 
-class Test7_Plugin : public Watchman_Plugin
+class Test08_Plugin : public Watchman_Plugin
 {
 
 public:
-				explicit Test7_Plugin(void *handle, int version);
+				explicit Test08_Plugin(void *handle, int version);
 
 public:
 	int			init(Watchman *w, int argc, char **argv);
@@ -60,7 +64,7 @@ private:
 	Allocator		*_alloc;
 
 private:
-	Test7_Program		_proc;
+	Test08_Program		_proc;
 
 private:
 	Buffer			_buf;
@@ -70,17 +74,17 @@ private:
 	Named_Clingy_File	*_fe;
 };
 
-Test7_Program::Test7_Program()
+Test08_Program::Test08_Program()
 : Program(_fill_argv())
 {
 }
 
-Test7_Plugin::Test7_Plugin(void *handle, int version)
+Test08_Plugin::Test08_Plugin(void *handle, int version)
 : Watchman_Plugin(handle, version), _fo(nullptr), _fe(nullptr)
 {
 }
 
-int Test7_Plugin::init(Watchman *w, int argc, char **argv)
+int Test08_Plugin::init(Watchman *w, int argc, char **argv)
 {
 	int err;
 
@@ -115,7 +119,7 @@ int Test7_Plugin::init(Watchman *w, int argc, char **argv)
 	return 0;
 }
 
-int Test7_Plugin::fini()
+int Test08_Plugin::fini()
 {
 	_fo = _alloc->destroy<Named_Clingy_File>(_fo);
 	_fe = _alloc->destroy<Named_Clingy_File>(_fe);
@@ -129,6 +133,6 @@ extern "C" Watchman_Plugin *entry(void *handle, Watchman *w)
 
 	alloc = w->alloc();
 
-	return alloc->create<Test7_Plugin>(handle, 1);
-}
+	return alloc->create<Test08_Plugin>(handle, 1);
+};
 

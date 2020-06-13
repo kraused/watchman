@@ -10,7 +10,7 @@
 #include "watchman/compiler.hxx"
 #include "watchman/error.hxx"
 
-class Test1_Child : public Child
+class Test01_Child : public Child
 {
 
 public:
@@ -20,11 +20,11 @@ public:
 
 };
 
-class Test1_Plugin : public Watchman_Plugin
+class Test01_Plugin : public Watchman_Plugin
 {
 
 public:
-			explicit Test1_Plugin(void *handle, int version);
+			explicit Test01_Plugin(void *handle, int version);
 
 public:
 	int		init(Watchman *w, int argc, char **argv);
@@ -34,7 +34,7 @@ private:
 	Allocator	*_alloc;
 
 private:
-	Test1_Child	_proc;
+	Test01_Child	_proc;
 
 private:
 	Buffer		_buf;
@@ -44,30 +44,30 @@ private:
 	File		*_fe;
 };
 
-int Test1_Child::execute()
+int Test01_Child::execute()
 {
 	WATCHMAN_DEBUG("function entry point");
 	return 0;
 }
 
-int Test1_Child::terminate()
+int Test01_Child::terminate()
 {
 	WATCHMAN_DEBUG("function entry point");
 	return 0;
 }
 
-int Test1_Child::kill()
+int Test01_Child::kill()
 {
 	WATCHMAN_DEBUG("function entry point");
 	return 0;
 }
 
-Test1_Plugin::Test1_Plugin(void *handle, int version)
+Test01_Plugin::Test01_Plugin(void *handle, int version)
 : Watchman_Plugin(handle, version), _fo(nullptr), _fe(nullptr)
 {
 }
 
-int Test1_Plugin::init(Watchman *w, int argc, char **argv)
+int Test01_Plugin::init(Watchman *w, int argc, char **argv)
 {
 	int err;
 
@@ -85,7 +85,7 @@ int Test1_Plugin::init(Watchman *w, int argc, char **argv)
 	return 0;
 }
 
-int Test1_Plugin::fini()
+int Test01_Plugin::fini()
 {
 	_fo = _alloc->destroy<File>(_fo);
 	_fe = _alloc->destroy<File>(_fe);
@@ -99,6 +99,6 @@ extern "C" Watchman_Plugin *entry(void *handle, Watchman *w)
 
 	alloc = w->alloc();
 
-	return alloc->create<Test1_Plugin>(handle, 1);
+	return alloc->create<Test01_Plugin>(handle, 1);
 }
 

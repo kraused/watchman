@@ -15,9 +15,9 @@ OBJ   = main.o watchman.o plugin.o libc_alloc.o child.o program.o \
         rotator.o size_rotator.o \
         initfini.o error.o
 TESTS = tests/utils.o \
-        tests/test1.so tests/test2.so tests/test3.so \
-        tests/test4.so tests/test5.so tests/test6.so \
-        tests/test7.so tests/test8.so tests/test9.so
+        tests/test01.so tests/test02.so tests/test03.so \
+        tests/test04.so tests/test05.so tests/test06.so \
+        tests/test07.so tests/test08.so tests/test09.so
 
 Q = @
 

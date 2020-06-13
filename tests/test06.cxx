@@ -31,7 +31,7 @@ static char **_fill_argv()
 	strcpy(_producer[2], "1-200");	/* line length variation */
 	strcpy(_producer[3], "1000");	/* number of lines written at once */
 	strcpy(_producer[4], "10");	/* output frequency [Hz] */
-	strcpy(_producer[5], "tests/test6.copy");
+	strcpy(_producer[5], "tests/test06.copy");
 
 	_argv[0] = _producer[0];
 	_argv[1] = _producer[1];
@@ -44,19 +44,19 @@ static char **_fill_argv()
 	return _argv;
 }
 
-class Test6_Program : public Program
+class Test06_Program : public Program
 {
 
 public:
-			Test6_Program();
+			Test06_Program();
 
 };
 
-class Test6_Plugin : public Watchman_Plugin
+class Test06_Plugin : public Watchman_Plugin
 {
 
 public:
-			explicit Test6_Plugin(void *handle, int version);
+			explicit Test06_Plugin(void *handle, int version);
 
 public:
 	int		init(Watchman *w, int argc, char **argv);
@@ -66,7 +66,7 @@ private:
 	Allocator	*_alloc;
 
 private:
-	Test6_Program	_proc;
+	Test06_Program	_proc;
 
 private:
 	Buffer		_buf;
@@ -76,17 +76,17 @@ private:
 	File		*_fe;
 };
 
-Test6_Program::Test6_Program()
+Test06_Program::Test06_Program()
 : Program(_fill_argv())
 {
 }
 
-Test6_Plugin::Test6_Plugin(void *handle, int version)
+Test06_Plugin::Test06_Plugin(void *handle, int version)
 : Watchman_Plugin(handle, version), _fo(nullptr), _fe(nullptr)
 {
 }
 
-int Test6_Plugin::init(Watchman *w, int argc, char **argv)
+int Test06_Plugin::init(Watchman *w, int argc, char **argv)
 {
 	Named_Unpriv_File *fd;
 	int err;
@@ -127,7 +127,7 @@ int Test6_Plugin::init(Watchman *w, int argc, char **argv)
 	return 0;
 }
 
-int Test6_Plugin::fini()
+int Test06_Plugin::fini()
 {
 	_fo = _alloc->destroy<File>(_fo);
 	_fe = _alloc->destroy<File>(_fe);
@@ -141,6 +141,6 @@ extern "C" Watchman_Plugin *entry(void *handle, Watchman *w)
 
 	alloc = w->alloc();
 
-	return alloc->create<Test6_Plugin>(handle, 1);
+	return alloc->create<Test06_Plugin>(handle, 1);
 };
 
