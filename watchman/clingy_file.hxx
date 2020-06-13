@@ -25,8 +25,11 @@ public:
 			 */
 	int		attach(const char *mountpoint);
 
-protected:
-	bool		can_reopen();
+public:
+	virtual bool	can_reopen();
+
+public:
+	virtual bool	can_rename();
 
 private:
 #undef  WATCHMAN_FILESYSTEM_MAX_NAME_LEN
@@ -37,7 +40,7 @@ private:
 	char		_source[WATCHMAN_PATH_MAX_LEN];
 
 private:
-	bool		_filesystem_is_mounted();
+	bool		_filesystem_is_mounted() const;
 
 };
 
@@ -61,18 +64,20 @@ int Clingy_File<File_Type>::attach(const char *mountpoint)
 template<class File_Type>
 bool Clingy_File<File_Type>::can_reopen()
 {
-	bool mounted;
-
 	if (0 == _mountpoint[0])	/* attach() failed or has not been called. */
 		return false;
 
-	mounted = _filesystem_is_mounted();
-
-	return mounted;
+	return _filesystem_is_mounted();
 }
 
 template<class File_Type>
-bool Clingy_File<File_Type>::_filesystem_is_mounted()
+bool Clingy_File<File_Type>::can_rename()
+{
+	return can_reopen();	/* Same conditions */
+}
+
+template<class File_Type>
+bool Clingy_File<File_Type>::_filesystem_is_mounted() const
 {
 	return _clingy_file_filesystem_is_mounted(_mountpoint, _fstype, _source);
 }

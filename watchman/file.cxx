@@ -43,7 +43,7 @@ static const char *_state_to_string(int state)
 
 
 File::File(int fd)
-: _state(WATCHMAN_FILE_STATE_CLOSED), _fd(fd), _last_write_failed(0)
+: _state(WATCHMAN_FILE_STATE_CLOSED), _fd(fd), _clean(true), _last_write_failed(0)
 {
 	if (fd >= 0) {
 		_state = WATCHMAN_FILE_STATE_HEALTHY;
@@ -102,17 +102,68 @@ long long File::write(const void *buf, long long nbyte)
 		_state = WATCHMAN_FILE_STATE_HEALTHY;
 	}
 
+	increment_file_size(x);
+
 	return x;
 }
 
-bool File::can_reopen()
+const char *File::path() const
+{
+	return NULL;
+}
+
+long long File::size() const
+{
+	return -1;
+}
+
+void File::increment_file_size(long long n)
+{
+}
+
+bool File::supports_reopen() const
 {
 	return false;	/* reopen() not implemented */
 }
 
-int File::reopen()
+bool File::can_reopen()
+{
+	return false;
+}
+
+int File::reopen(const char *path)
 {
 	return -1;
+}
+
+bool File::supports_rename() const
+{
+	return false;
+}
+
+bool File::can_rename()
+{
+	return false;
+}
+
+int File::rename(const char *newpath)
+{
+	return -1;
+}
+
+void File::flag_as_dirty()
+{
+	_clean = false;
+}
+
+void File::flag_as_clean()
+{
+	_clean = true;
+}
+
+bool File::is_clean() const
+{
+	return _clean;
 }
 
 void File::force_different_state(int state)

@@ -110,7 +110,7 @@ int Test8_Plugin::init(Watchman *w, int argc, char **argv)
 		return err;
 	}
 
-	err = w->add_child(&_proc, &_buf, _fo, _fe);
+	err = w->add_child(&_proc, &_buf, _fo, _fe, NULL);
 	if (unlikely(err)) {
 		WATCHMAN_ERROR("Failed to add children to list: %d", err);
 		return err;

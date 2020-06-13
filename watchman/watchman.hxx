@@ -11,6 +11,7 @@ class Allocator;
 class Child;
 class Buffer;
 class File;
+class Rotator;
 
 struct _Watchman_Child
 {
@@ -19,6 +20,7 @@ struct _Watchman_Child
 	Buffer		*buffer;
 	File		*fo;
 	File		*fe;
+	Rotator		*rot;
 };
 
 /* Watchman: Main application class.
@@ -70,6 +72,10 @@ private:
 	int		_handle_children();
 	int		_handle_child(int i);
 
+private:
+	int 		_maybe_rotate_files();
+	int 		_maybe_rotate_file(int i, File *f, Rotator *rot);
+
 public:
 			/* Add a new children to the list. To each children an associated
 			 * buffer instance and output file pair is associated. The buffer
@@ -78,7 +84,7 @@ public:
 			 * advised as it will result in an unpredicable distribution of
 			 * output lines over the different files.
 			 */
-	int		add_child(Child *child, Buffer *buffer, File *fo, File *fe);
+	int		add_child(Child *child, Buffer *buffer, File *fo, File *fe, Rotator *rot);
 
 private:
 #undef	WATCHMAN_MAX_POLLFDS

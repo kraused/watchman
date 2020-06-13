@@ -22,7 +22,10 @@ private:
 	int		_drop_privileges();
 
 protected:
-	int		reopen();
+	virtual int	reopen(const char *path);
+
+private:
+	virtual int	rename(const char *newpath);
 
 private:
 	int		_uid;

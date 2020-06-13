@@ -76,7 +76,7 @@ int Named_Unpriv_File::open(const char *path, int oflags, int perms)
 	return Named_File::open(path, oflags, perms);
 }
 
-int Named_Unpriv_File::reopen()
+int Named_Unpriv_File::reopen(const char *path)
 {
 	int err;
 	RAII_Effective_Ids _restore_ids(geteuid(), getegid());
@@ -86,6 +86,19 @@ int Named_Unpriv_File::reopen()
 		return err;
 	}
 
-	return Named_File::reopen();
+	return Named_File::reopen(path);
 }
 
+
+int Named_Unpriv_File::rename(const char *newpath)
+{
+	int err;
+	RAII_Effective_Ids _restore_ids(geteuid(), getegid());
+
+	err = _set_effective_ids<true>(_uid, _gid);
+	if (unlikely(err < 0)) {
+		return err;
+	}
+
+	return Named_File::rename(newpath);
+}

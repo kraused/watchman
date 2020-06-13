@@ -1,0 +1,897 @@
+From ddab6f6238b038ac7df9f07afb543c49124e92e0 Mon Sep 17 00:00:00 2001
+From: Dorian Krause <github@91df63fb.com>
+Date: Fri, 12 Jun 2020 21:31:56 +0200
+Subject: [PATCH 1/5] Add new File instances with specific owner
+
+This commit adds a first version of file types with a specific
+(unprivileged) user. This functionality is required to be able
+to write to root-squashed file systems.
+---
+ Makefile                              |   5 +-
+ watchman/clingy_file.cxx              | 259 +++++++++++++++++++++++++
+ watchman/clingy_file.hxx              |  80 ++++++++
+ watchman/named_clingy_file.cxx        | 267 --------------------------
+ watchman/named_clingy_file.hxx        |  39 +---
+ watchman/named_unpriv_clingy_file.cxx |   4 +
+ watchman/named_unpriv_clingy_file.hxx |  17 ++
+ watchman/named_unpriv_file.cxx        |  91 +++++++++
+ watchman/named_unpriv_file.hxx        |  33 ++++
+ 9 files changed, 491 insertions(+), 304 deletions(-)
+ create mode 100644 watchman/clingy_file.cxx
+ create mode 100644 watchman/clingy_file.hxx
+ create mode 100644 watchman/named_unpriv_clingy_file.cxx
+ create mode 100644 watchman/named_unpriv_clingy_file.hxx
+ create mode 100644 watchman/named_unpriv_file.cxx
+ create mode 100644 watchman/named_unpriv_file.hxx
+
+diff --git a/Makefile b/Makefile
+index 00fc640..36ffb70 100644
+--- a/Makefile
++++ b/Makefile
+@@ -10,8 +10,9 @@ LDFLAGS  = -fno-exceptions -fno-rtti -fPIC -Wl,-export-dynamic -O0 -ggdb
+ LIBS     = -ldl
+ 
+ OBJ   = main.o watchman.o plugin.o libc_alloc.o child.o program.o \
+-        buffer.o file.o named_file.o named_clingy_file.o initfini.o \
+-        error.o
++        buffer.o file.o named_file.o named_unpriv_file.o \
++        clingy_file.o named_clingy_file.o named_unpriv_clingy_file.o \
++        initfini.o error.o
+ TESTS = tests/test1.so tests/test2.so tests/test3.so \
+         tests/test4.so tests/test5.so tests/test6.so
+ 
+diff --git a/watchman/clingy_file.cxx b/watchman/clingy_file.cxx
+new file mode 100644
+index 0000000..074a1b3
+--- /dev/null
++++ b/watchman/clingy_file.cxx
+@@ -0,0 +1,259 @@
++
++#include <string.h>
++#include <stdio.h>
++#include <errno.h>
++#include <sys/stat.h>
++#include <fcntl.h>
++#include <unistd.h>
++
++#include "clingy_file.hxx"
++#include "compiler.hxx"
++#include "error.hxx"
++
++static int _seek_to_string(int fd, const char *str)
++{
++	long long i;
++	long long n = strlen(str);
++	char c;
++	int err;
++
++	i = 0;
++	while (1) {
++		err = read(fd, &c, 1);
++		if (0 == err)
++			break;
++		if (unlikely(err < 0)) {
++			WATCHMAN_ERROR("read() failed with errno %d: %s", errno, strerror(errno));
++			return -1;
++		}
++
++		if (c == str[i]) {
++			++i;
++			if (n == i)
++				return 0;
++		} else {
++			i = 0;
++		}
++	}
++
++	return -1;
++}
++
++static int _copy_until_whitespace(int fd, char *str, long long len)
++{
++	long long i;
++	char c;
++	int err;
++
++	for (i = 0; i < len; ++i) {
++		err = read(fd, &c, 1);
++		if (0 == err)
++			break;
++		if (unlikely(err < 0)) {
++			WATCHMAN_ERROR("read() failed with errno %d: %s", errno, strerror(errno));
++			return -1;
++		}
++
++		str[i] = c;
++		if (' ' == c) {
++			str[i] = 0;
++			return 0;
++		}
++	}
++
++	return -1;
++}
++
++static int _compare_content(int fd, const char *str, long long len)
++{
++	long long i;
++	char c;
++	int err;
++
++	for (i = 0; i < len; ++i) {
++		if (0 == str[i])
++			return 0;	/* Complete string matched. */
++
++		err = read(fd, &c, 1);
++		if (0 == err)
++			break;
++		if (unlikely(err < 0)) {
++			WATCHMAN_ERROR("read() failed with errno %d: %s", errno, strerror(errno));
++			return -1;
++		}
++
++		if (c != str[i])
++			return 1;
++	}
++
++	return -1;
++}
++
++static int _skip_whitespace(int fd)
++{
++	char c;
++	int err;
++
++	err = read(fd, &c, 1);
++	if (0 == err) {
++		WATCHMAN_ERROR("read() returned zero.");
++		return -1;
++	}
++	if (unlikely(err < 0)) {
++		WATCHMAN_ERROR("read() failed with errno %d: %s", errno, strerror(errno));
++		return -1;
++	}
++
++	if (' ' == c) {
++		return 0;
++	}
++
++	return -1;
++}
++
++static bool _copy_from_mountinfo(int fd, const char *mountpoint, char *fstype, char *source)
++{
++	int err;
++
++	/* fstat() on fd will not return the proper file size (see NOTES section in
++	 * man fstat(2)) so we cannot mmap() the file. Reading it char by char is not
++	 * very well performing but should suffice for our purposes.
++	 */
++	err = _seek_to_string(fd, mountpoint);
++	if (unlikely(err < 0)) {
++		WATCHMAN_ERROR("Could not find mountpoint in /proc/self/mountinfo");
++		return -EINVAL;
++	}
++	
++	err = _seek_to_string(fd, "- ");
++	if (unlikely(err < 0)) {
++		WATCHMAN_ERROR("Could not find separator in /proc/self/mountinfo");
++		return -EINVAL;
++	}
++
++	err = _copy_until_whitespace(fd, fstype, WATCHMAN_FILESYSTEM_MAX_NAME_LEN);
++	if (unlikely(err < 0)) {
++		WATCHMAN_ERROR("Could not retrieve filesystem type from /proc/self/mountinfo");
++		return -EINVAL;
++	}
++	if (unlikely(err >= WATCHMAN_FILESYSTEM_MAX_NAME_LEN)) {
++		WATCHMAN_ERROR("filesystem type truncated");
++		/* Try to continue. */
++	}
++
++	err = _copy_until_whitespace(fd, source, WATCHMAN_PATH_MAX_LEN);
++	if (unlikely(err < 0)) {
++		WATCHMAN_ERROR("Could not retrieve mount source from /proc/self/mountinfo");
++		return -EINVAL;
++	}
++	if (unlikely(err >= WATCHMAN_PATH_MAX_LEN)) {
++		WATCHMAN_ERROR("filesystem type truncated");
++		/* Try to continue. */
++	}
++
++	return 0;
++}
++
++void _clingy_file_clean(char *mountpoint, char *fstype, char *source)
++{
++	memset(mountpoint, 0, WATCHMAN_PATH_MAX_LEN);
++	memset(fstype, 0, WATCHMAN_FILESYSTEM_MAX_NAME_LEN);
++	memset(source, 0, WATCHMAN_PATH_MAX_LEN);	
++}
++
++bool _clingy_file_attach(const char *arg, char *mountpoint, char *fstype, char *source)
++{
++	int err;
++	int tmp;
++	int fd;
++
++	fd = -1;
++
++	err = snprintf(mountpoint, WATCHMAN_PATH_MAX_LEN, "%s", arg);
++	if (unlikely((err < 0) || (err >= WATCHMAN_PATH_MAX_LEN))) {
++		WATCHMAN_ERROR("snprintf() failed: mountpoint truncated");
++		return -1;
++	}
++
++	fd = ::open("/proc/self/mountinfo", O_RDONLY);
++	if (unlikely(fd < 0)) {
++		WATCHMAN_ERROR("open() failed with errno %d: %s", errno, strerror(errno));
++		mountpoint[0] = 0;
++		return -errno;
++	}
++
++	err = _copy_from_mountinfo(fd, mountpoint, fstype, source);
++
++	tmp = ::close(fd);
++	if (unlikely(tmp < 0)) {
++		WATCHMAN_ERROR("close() failed with errno %d: %s", errno, strerror(errno));
++	}
++
++	if (unlikely(err)) {
++		mountpoint[0] = 0;
++		fstype[0] = 0;
++		source[0] = 0;
++
++		return err;
++	}
++
++	WATCHMAN_DEBUG("mountpoint = \"%s\", fstype = \"%s\", mount source = \"%s\"", \
++	               mountpoint, fstype, source);
++
++	return 0;
++}
++
++bool _cling_file_filesystem_is_mounted(const char *mountpoint, const char *fstype, const char *source)
++{
++	int err;
++	int tmp;
++	int fd;
++	bool mounted;
++
++	mounted = true;
++
++	fd = ::open("/proc/self/mountinfo", O_RDONLY);
++	if (unlikely(fd < 0)) {
++		WATCHMAN_ERROR("open() failed with errno %d: %s", errno, strerror(errno));
++		mounted = false;
++	}
++
++	err = _seek_to_string(fd, mountpoint);
++	if (unlikely(err < 0)) {
++		mounted = false;
++		goto exit;
++	}
++	
++	err = _seek_to_string(fd, "- ");
++	if (unlikely(err < 0)) {
++		mounted = false;
++		goto exit;
++	}
++
++	err = _compare_content(fd, fstype, WATCHMAN_FILESYSTEM_MAX_NAME_LEN);
++	if (unlikely(err)) {
++		mounted = false;
++		goto exit;
++	}
++
++	err = _skip_whitespace(fd);
++	if (unlikely(err)) {
++		mounted = false;
++		goto exit;
++	}
++
++	err = _compare_content(fd, source, WATCHMAN_PATH_MAX_LEN);
++	if (unlikely(err)) {
++		mounted = false;
++		goto exit;
++	}
++
++exit:
++	tmp = ::close(fd);
++	if (unlikely(tmp < 0)) {
++		WATCHMAN_ERROR("close() failed with errno %d: %s", errno, strerror(errno));
++	}
++
++	return mounted;
++}
++
+diff --git a/watchman/clingy_file.hxx b/watchman/clingy_file.hxx
+new file mode 100644
+index 0000000..76e431a
+--- /dev/null
++++ b/watchman/clingy_file.hxx
+@@ -0,0 +1,80 @@
++
++#ifndef WATCHMAN_CLINGY_FILE_HXX_INCLUDED
++#define WATCHMAN_CLINGY_FILE_HXX_INCLUDED 1
++
++#include "watchman/config.hxx"
++#include "watchman/named_file.hxx"
++
++/* File with an associated path on a filesystem. In contrast to Named_File instances
++ * of Named_Clingy_File are associated with a particular filesystem and mountpoint and
++ * will not allow reopening if that filesystem is not mounted where it is expected.
++ */
++template<class File_Type>
++class Clingy_File : public File_Type
++{
++
++public:
++			/* Note: The file cannot be used before open() has been
++			 *       called.
++			 */
++			explicit Clingy_File();
++
++public:
++			/* Attach the instance to a filesystem mounted on the specified
++			 * mountpoint.
++			 */
++	int		attach(const char *mountpoint);
++
++protected:
++	bool		can_reopen();
++
++private:
++#undef  WATCHMAN_FILESYSTEM_MAX_NAME_LEN
++#define WATCHMAN_FILESYSTEM_MAX_NAME_LEN	64
++
++	char		_mountpoint[WATCHMAN_PATH_MAX_LEN];
++	char		_fstype[WATCHMAN_FILESYSTEM_MAX_NAME_LEN];
++	char		_source[WATCHMAN_PATH_MAX_LEN];
++
++private:
++	bool		_filesystem_is_mounted();
++
++};
++
++
++void _clingy_file_clean(char *mountpoint, char *fstype, char *source);
++bool _clingy_file_attach(const char *arg, char *mountpoint, char *fstype, char *source);
++bool _clingy_file_filesystem_is_mounted(const char *mountpoint, const char *fstype, const char *source);
++
++template<class File_Type>
++Clingy_File<File_Type>::Clingy_File()
++{
++	_clingy_file_clean(_mountpoint, _fstype, _source);
++}
++
++template<class File_Type>
++int Clingy_File<File_Type>::attach(const char *mountpoint)
++{
++	return _clingy_file_attach(mountpoint, _mountpoint, _fstype, _source);
++}
++
++template<class File_Type>
++bool Clingy_File<File_Type>::can_reopen()
++{
++	bool mounted;
++
++	if (0 == _mountpoint[0])	/* attach() failed or has not been called. */
++		return false;
++
++	mounted = _filesystem_is_mounted();
++
++	return mounted;
++}
++
++template<class File_Type>
++bool Clingy_File<File_Type>::_filesystem_is_mounted()
++{
++	return _clingy_file_filesystem_is_mounted(_mountpoint, _fstype, _source);
++}
++
++#endif
+diff --git a/watchman/named_clingy_file.cxx b/watchman/named_clingy_file.cxx
+index 1733a95..71f2070 100644
+--- a/watchman/named_clingy_file.cxx
++++ b/watchman/named_clingy_file.cxx
+@@ -1,271 +1,4 @@
+ 
+-#include <string.h>
+-#include <stdio.h>
+-#include <errno.h>
+-#include <sys/stat.h>
+-#include <fcntl.h>
+-#include <unistd.h>
+-
+ #include "named_clingy_file.hxx"
+ #include "compiler.hxx"
+ #include "error.hxx"
+-
+-static int _seek_to_string(int fd, const char *str)
+-{
+-	long long i;
+-	long long n = strlen(str);
+-	char c;
+-	int err;
+-
+-	i = 0;
+-	while (1) {
+-		err = read(fd, &c, 1);
+-		if (0 == err)
+-			break;
+-		if (unlikely(err < 0)) {
+-			WATCHMAN_ERROR("read() failed with errno %d: %s", errno, strerror(errno));
+-			return -1;
+-		}
+-
+-		if (c == str[i]) {
+-			++i;
+-			if (n == i)
+-				return 0;
+-		} else {
+-			i = 0;
+-		}
+-	}
+-
+-	return -1;
+-}
+-
+-static int _copy_until_whitespace(int fd, char *str, long long len)
+-{
+-	long long i;
+-	char c;
+-	int err;
+-
+-	for (i = 0; i < len; ++i) {
+-		err = read(fd, &c, 1);
+-		if (0 == err)
+-			break;
+-		if (unlikely(err < 0)) {
+-			WATCHMAN_ERROR("read() failed with errno %d: %s", errno, strerror(errno));
+-			return -1;
+-		}
+-
+-		str[i] = c;
+-		if (' ' == c) {
+-			str[i] = 0;
+-			return 0;
+-		}
+-	}
+-
+-	return -1;
+-}
+-
+-static int _compare_content(int fd, char *str, long long len)
+-{
+-	long long i;
+-	char c;
+-	int err;
+-
+-	for (i = 0; i < len; ++i) {
+-		if (0 == str[i])
+-			return 0;	/* Complete string matched. */
+-
+-		err = read(fd, &c, 1);
+-		if (0 == err)
+-			break;
+-		if (unlikely(err < 0)) {
+-			WATCHMAN_ERROR("read() failed with errno %d: %s", errno, strerror(errno));
+-			return -1;
+-		}
+-
+-		if (c != str[i])
+-			return 1;
+-	}
+-
+-	return -1;
+-}
+-
+-static int _skip_whitespace(int fd)
+-{
+-	char c;
+-	int err;
+-
+-	err = read(fd, &c, 1);
+-	if (0 == err) {
+-		WATCHMAN_ERROR("read() returned zero.");
+-		return -1;
+-	}
+-	if (unlikely(err < 0)) {
+-		WATCHMAN_ERROR("read() failed with errno %d: %s", errno, strerror(errno));
+-		return -1;
+-	}
+-
+-	if (' ' == c) {
+-		return 0;
+-	}
+-
+-	return -1;
+-}
+-
+-Named_Clingy_File::Named_Clingy_File()
+-{
+-	memset(_mountpoint, 0, WATCHMAN_PATH_MAX_LEN);
+-	memset(_fstype, 0, WATCHMAN_FILESYSTEM_MAX_NAME_LEN);
+-	memset(_source, 0, WATCHMAN_PATH_MAX_LEN);
+-}
+-
+-int Named_Clingy_File::attach(const char *mountpoint)
+-{
+-	int err;
+-	int tmp;
+-	int fd;
+-
+-	fd = -1;
+-
+-	err = snprintf(_mountpoint, WATCHMAN_PATH_MAX_LEN, "%s", mountpoint);
+-	if (unlikely((err < 0) || (err >= WATCHMAN_PATH_MAX_LEN))) {
+-		WATCHMAN_ERROR("snprintf() failed: mountpoint truncated");
+-		return -1;
+-	}
+-
+-	fd = ::open("/proc/self/mountinfo", O_RDONLY);
+-	if (unlikely(fd < 0)) {
+-		WATCHMAN_ERROR("open() failed with errno %d: %s", errno, strerror(errno));
+-		_mountpoint[0] = 0;
+-		return -errno;
+-	}
+-
+-	err = _copy_from_mountinfo(fd);
+-
+-	tmp = ::close(fd);
+-	if (unlikely(tmp < 0)) {
+-		WATCHMAN_ERROR("close() failed with errno %d: %s", errno, strerror(errno));
+-	}
+-
+-	if (unlikely(err)) {
+-		_mountpoint[0] = 0;
+-		_fstype[0] = 0;
+-		_source[0] = 0;
+-
+-		return err;
+-	}
+-
+-	WATCHMAN_DEBUG("mountpoint = \"%s\", fstype = \"%s\", mount source = \"%s\"", \
+-	               _mountpoint, _fstype, _source);
+-
+-	return 0;
+-}
+-
+-int Named_Clingy_File::_copy_from_mountinfo(int fd)
+-{
+-	int err;
+-
+-	/* fstat() on fd will not return the proper file size (see NOTES section in
+-	 * man fstat(2)) so we cannot mmap() the file. Reading it char by char is not
+-	 * very well performing but should suffice for our purposes.
+-	 */
+-	err = _seek_to_string(fd, _mountpoint);
+-	if (unlikely(err < 0)) {
+-		WATCHMAN_ERROR("Could not find mountpoint in /proc/self/mountinfo");
+-		return -EINVAL;
+-	}
+-	
+-	err = _seek_to_string(fd, "- ");
+-	if (unlikely(err < 0)) {
+-		WATCHMAN_ERROR("Could not find separator in /proc/self/mountinfo");
+-		return -EINVAL;
+-	}
+-
+-	err = _copy_until_whitespace(fd, _fstype, WATCHMAN_FILESYSTEM_MAX_NAME_LEN);
+-	if (unlikely(err < 0)) {
+-		WATCHMAN_ERROR("Could not retrieve filesystem type from /proc/self/mountinfo");
+-		return -EINVAL;
+-	}
+-	if (unlikely(err >= WATCHMAN_FILESYSTEM_MAX_NAME_LEN)) {
+-		WATCHMAN_ERROR("filesystem type truncated");
+-		/* Try to continue. */
+-	}
+-
+-	err = _copy_until_whitespace(fd, _source, WATCHMAN_PATH_MAX_LEN);
+-	if (unlikely(err < 0)) {
+-		WATCHMAN_ERROR("Could not retrieve mount source from /proc/self/mountinfo");
+-		return -EINVAL;
+-	}
+-	if (unlikely(err >= WATCHMAN_PATH_MAX_LEN)) {
+-		WATCHMAN_ERROR("filesystem type truncated");
+-		/* Try to continue. */
+-	}
+-
+-	return 0;
+-}
+-
+-bool Named_Clingy_File::can_reopen()
+-{
+-	bool mounted;
+-
+-	if (0 == _mountpoint[0])	/* attach() failed or has not been called. */
+-		return false;
+-
+-	mounted = _filesystem_is_mounted();
+-
+-	return mounted;
+-}
+-
+-bool Named_Clingy_File::_filesystem_is_mounted()
+-{
+-	int err;
+-	int tmp;
+-	int fd;
+-	bool mounted;
+-
+-	mounted = true;
+-
+-	fd = ::open("/proc/self/mountinfo", O_RDONLY);
+-	if (unlikely(fd < 0)) {
+-		WATCHMAN_ERROR("open() failed with errno %d: %s", errno, strerror(errno));
+-		mounted = false;
+-	}
+-
+-	err = _seek_to_string(fd, _mountpoint);
+-	if (unlikely(err < 0)) {
+-		mounted = false;
+-		goto exit;
+-	}
+-	
+-	err = _seek_to_string(fd, "- ");
+-	if (unlikely(err < 0)) {
+-		mounted = false;
+-		goto exit;
+-	}
+-
+-	err = _compare_content(fd, _fstype, WATCHMAN_FILESYSTEM_MAX_NAME_LEN);
+-	if (unlikely(err)) {
+-		mounted = false;
+-		goto exit;
+-	}
+-
+-	err = _skip_whitespace(fd);
+-	if (unlikely(err)) {
+-		mounted = false;
+-		goto exit;
+-	}
+-
+-	err = _compare_content(fd, _source, WATCHMAN_PATH_MAX_LEN);
+-	if (unlikely(err)) {
+-		mounted = false;
+-		goto exit;
+-	}
+-
+-exit:
+-	tmp = ::close(fd);
+-	if (unlikely(tmp < 0)) {
+-		WATCHMAN_ERROR("close() failed with errno %d: %s", errno, strerror(errno));
+-	}
+-
+-	return mounted;
+-}
+-
+diff --git a/watchman/named_clingy_file.hxx b/watchman/named_clingy_file.hxx
+index 9e8722a..4a04198 100644
+--- a/watchman/named_clingy_file.hxx
++++ b/watchman/named_clingy_file.hxx
+@@ -1,47 +1,16 @@
+ 
+-#ifndef WATCHMAN_CLINGY_NAMED_FILE_HXX_INCLUDED
+-#define WATCHMAN_CLINGY_NAMED_FILE_HXX_INCLUDED 1
++#ifndef WATCHMAN_NAMED_CLINGY_FILE_HXX_INCLUDED
++#define WATCHMAN_NAMED_CLINGY_FILE_HXX_INCLUDED 1
+ 
+ #include "watchman/config.hxx"
++#include "watchman/clingy_file.hxx"
+ #include "watchman/named_file.hxx"
+ 
+ /* File with an associated path on a filesystem. In contrast to Named_File instances
+  * of Named_Clingy_File are associated with a particular filesystem and mountpoint and
+  * will not allow reopening if that filesystem is not mounted where it is expected.
+  */
+-class Named_Clingy_File : public Named_File
+-{
+-
+-public:
+-			/* Note: The file cannot be used before open() has been
+-			 *       called.
+-			 */
+-			explicit Named_Clingy_File();
+-
+-public:
+-			/* Attach the instance to a filesystem mounted on the specified
+-			 * mountpoint.
+-			 */
+-	int		attach(const char *mountpoint);
+-
+-private:
+-	int		_copy_from_mountinfo(int fd);
+-
+-protected:
+-	bool		can_reopen();
+-
+-private:
+-#undef  WATCHMAN_FILESYSTEM_MAX_NAME_LEN
+-#define WATCHMAN_FILESYSTEM_MAX_NAME_LEN	64
+-
+-	char		_mountpoint[WATCHMAN_PATH_MAX_LEN];
+-	char		_fstype[WATCHMAN_FILESYSTEM_MAX_NAME_LEN];
+-	char		_source[WATCHMAN_PATH_MAX_LEN];
+-
+-private:
+-	bool		_filesystem_is_mounted();
+-
+-};
++typedef Clingy_File<Named_File> Named_Clingy_File;
+ 
+ #endif
+ 
+diff --git a/watchman/named_unpriv_clingy_file.cxx b/watchman/named_unpriv_clingy_file.cxx
+new file mode 100644
+index 0000000..71f2070
+--- /dev/null
++++ b/watchman/named_unpriv_clingy_file.cxx
+@@ -0,0 +1,4 @@
++
++#include "named_clingy_file.hxx"
++#include "compiler.hxx"
++#include "error.hxx"
+diff --git a/watchman/named_unpriv_clingy_file.hxx b/watchman/named_unpriv_clingy_file.hxx
+new file mode 100644
+index 0000000..2484ff3
+--- /dev/null
++++ b/watchman/named_unpriv_clingy_file.hxx
+@@ -0,0 +1,17 @@
++
++#ifndef WATCHMAN_NAMED_UNPRIV_CLINGY_FILE_HXX_INCLUDED
++#define WATCHMAN_NAMED_UNPRIV_CLINGY_FILE_HXX_INCLUDED 1
++
++#include "watchman/config.hxx"
++#include "watchman/clingy_file.hxx"
++#include "watchman/named_unpriv_file.hxx"
++
++/* File with an unprivileged ower and an associated path on a filesystem. In contrast
++ * to Named_Unpriv_File instances of Named_Unpriv_Clingy_File are associated with a particular 
++ * filesystem and mountpoint and will not allow reopening if that filesystem is not
++ * mounted where it is expected.
++ */
++typedef Clingy_File<Named_Unpriv_File> Named_Unpriv_Clingy_File;
++
++#endif
++
+diff --git a/watchman/named_unpriv_file.cxx b/watchman/named_unpriv_file.cxx
+new file mode 100644
+index 0000000..436f20b
+--- /dev/null
++++ b/watchman/named_unpriv_file.cxx
+@@ -0,0 +1,91 @@
++
++#include <string.h>
++#include <unistd.h>
++#include <errno.h>
++
++#include "named_unpriv_file.hxx"
++#include "compiler.hxx"
++#include "error.hxx"
++
++
++template<bool stop_on_error>
++int _set_effective_ids(uid_t uid, gid_t gid)
++{
++	int err;
++
++	if (geteuid() != uid) {
++		err = seteuid(uid);
++		if (unlikely(err < 0)) {
++			WATCHMAN_ERROR("seteuid() failed with errno %d: %s", errno, strerror(errno));
++			if (stop_on_error) {
++				return -1;
++			}
++		}
++	}
++	if (getegid() != gid) {
++		err = setegid(gid);
++		if (unlikely(err < 0)) {
++			WATCHMAN_ERROR("setegid() failed with errno %d: %s", errno, strerror(errno));
++			if (stop_on_error) {
++				return -1;
++			}
++		}
++	}	
++
++	return 0;
++}
++
++
++class RAII_Effective_Ids
++{
++public:
++		explicit RAII_Effective_Ids(int uid, int gid);
++		~RAII_Effective_Ids();
++
++private:
++	int	_uid;
++	int	_gid;
++};
++
++RAII_Effective_Ids::RAII_Effective_Ids(int uid, int gid)
++: _uid(uid), _gid(gid)
++{
++}
++
++RAII_Effective_Ids::~RAII_Effective_Ids()
++{
++	_set_effective_ids<false>(_uid, _gid);
++}
++
++
++Named_Unpriv_File::Named_Unpriv_File(int uid, int gid)
++: Named_File(), _uid(uid), _gid(gid)
++{
++}
++
++int Named_Unpriv_File::open(const char *path, int oflags, int perms)
++{
++	int err;
++	RAII_Effective_Ids _restore_ids(geteuid(), getegid());
++
++	err = _set_effective_ids<true>(_uid, _gid);
++	if (unlikely(err < 0)) {
++		return err;
++	}
++
++	return Named_File::open(path, oflags, perms);
++}
++
++int Named_Unpriv_File::reopen()
++{
++	int err;
++	RAII_Effective_Ids _restore_ids(geteuid(), getegid());
++
++	err = _set_effective_ids<true>(_uid, _gid);
++	if (unlikely(err < 0)) {
++		return err;
++	}
++
++	return Named_File::reopen();
++}
++
+diff --git a/watchman/named_unpriv_file.hxx b/watchman/named_unpriv_file.hxx
+new file mode 100644
+index 0000000..cc797fc
+--- /dev/null
++++ b/watchman/named_unpriv_file.hxx
+@@ -0,0 +1,33 @@
++
++#ifndef WATCHMAN_NAMED_UNPRIV_FILE_HXX_INCLUDED
++#define WATCHMAN_NAMED_UNPRIV_FILE_HXX_INCLUDED 1
++
++#include "watchman/config.hxx"
++#include "watchman/named_file.hxx"
++
++/* File with an associated path on the filesystem and an unprivileged users.
++ * Named_Unpriv_File instances are required, e.g., to write to root-squash mounted
++ * file systems.
++ */
++class Named_Unpriv_File : public Named_File
++{
++
++public:
++			explicit Named_Unpriv_File(int uid, int gid);
++
++public:
++	int		open(const char *path, int oflags, int perms);
++
++private:
++	int		_drop_privileges();
++
++protected:
++	int		reopen();
++
++private:
++	int		_uid;
++	int		_gid;
++};
++
++#endif
++
+-- 
+2.25.4
+

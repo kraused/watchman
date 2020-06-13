@@ -89,6 +89,19 @@ long long Buffer::_read_from(File *f, _Buffer_Line_Queue *q)
 	long long n, k;
 	_Buffer_Line *line = q->tail();	/* May be NULL. */
 
+#if 0
+	/* FIXME With this change, test4 will succeed but we will be 
+	 * stalling the child processes in case the output file cannot
+	 * be written to for a longer time.
+	 */
+	/* Avoid the need to drop any read content if we overrun the
+	 * buffer space.
+	 */
+	if (q->length() >= (WATCHMAN_BUFFER_QUEUE_LEN - 1)) {
+		return 0;
+	}
+#endif
+
 	n = f->read(_buf, WATCHMAN_BUFFER_MAX_LINELEN);
 	if (unlikely(n < 0)) {
 		return n;
@@ -119,12 +132,26 @@ long long Buffer::_write_to(File *f, _Buffer_Line_Queue *q)
 	}
 
 	if (likely(n > 0)) {
+		f->flag_as_dirty();
+
 		line->begin += n;
 		line->size  -= n;
 	}
 
-	if (0 == line->size)
+	if (0 == line->size) {
+		/* The write algorithm itself does not care about the newline.
+		 * Therefore there is a chance of having a file marked almost
+		 * permanently as dirty and hence blocking any rotation. If this
+		 * happens in practice, the right approach would be to mark the
+		 * buffer lines as complete/incomplete and only flush complete
+		 * lines. A special handling of the flush at the end of the program
+		 * execution would be required.
+		 */
+		if ('\n' == *(line->line + line->begin - 1))
+			f->flag_as_clean();
+
 		q->dequeue();
+	}
 
 	return n;
 }

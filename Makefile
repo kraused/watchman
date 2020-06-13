@@ -12,11 +12,12 @@ LIBS     = -ldl
 OBJ   = main.o watchman.o plugin.o libc_alloc.o child.o program.o \
         buffer.o file.o named_file.o named_unpriv_file.o \
         clingy_file.o named_clingy_file.o named_unpriv_clingy_file.o \
+        rotator.o size_rotator.o \
         initfini.o error.o
 TESTS = tests/utils.o \
         tests/test1.so tests/test2.so tests/test3.so \
         tests/test4.so tests/test5.so tests/test6.so \
-        tests/test7.so tests/test8.so
+        tests/test7.so tests/test8.so tests/test9.so
 
 Q = @
 

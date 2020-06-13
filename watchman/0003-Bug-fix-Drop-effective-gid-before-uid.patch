@@ -1,0 +1,48 @@
+From 0c7cee1a736dd8ee753b9fdd8dc4144f1b4e4ad1 Mon Sep 17 00:00:00 2001
+From: Dorian Krause <github@91df63fb.com>
+Date: Fri, 12 Jun 2020 21:54:33 +0200
+Subject: [PATCH 3/5] Bug fix: Drop effective gid before uid
+
+---
+ watchman/named_unpriv_file.cxx | 14 +++++++-------
+ 1 file changed, 7 insertions(+), 7 deletions(-)
+
+diff --git a/watchman/named_unpriv_file.cxx b/watchman/named_unpriv_file.cxx
+index 436f20b..546752c 100644
+--- a/watchman/named_unpriv_file.cxx
++++ b/watchman/named_unpriv_file.cxx
+@@ -13,24 +13,24 @@ int _set_effective_ids(uid_t uid, gid_t gid)
+ {
+ 	int err;
+ 
+-	if (geteuid() != uid) {
+-		err = seteuid(uid);
++	if (getegid() != gid) {
++		err = setegid(gid);
+ 		if (unlikely(err < 0)) {
+-			WATCHMAN_ERROR("seteuid() failed with errno %d: %s", errno, strerror(errno));
++			WATCHMAN_ERROR("setegid() failed with errno %d: %s", errno, strerror(errno));
+ 			if (stop_on_error) {
+ 				return -1;
+ 			}
+ 		}
+ 	}
+-	if (getegid() != gid) {
+-		err = setegid(gid);
++	if (geteuid() != uid) {
++		err = seteuid(uid);
+ 		if (unlikely(err < 0)) {
+-			WATCHMAN_ERROR("setegid() failed with errno %d: %s", errno, strerror(errno));
++			WATCHMAN_ERROR("seteuid() failed with errno %d: %s", errno, strerror(errno));
+ 			if (stop_on_error) {
+ 				return -1;
+ 			}
+ 		}
+-	}	
++	}
+ 
+ 	return 0;
+ }
+-- 
+2.25.4
+

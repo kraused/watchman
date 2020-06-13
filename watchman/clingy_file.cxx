@@ -24,7 +24,7 @@ static int _seek_to_string(int fd, const char *str)
 			break;
 		if (unlikely(err < 0)) {
 			WATCHMAN_ERROR("read() failed with errno %d: %s", errno, strerror(errno));
-			return -1;
+			return -errno;
 		}
 
 		if (c == str[i]) {

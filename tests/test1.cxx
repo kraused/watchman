@@ -76,7 +76,7 @@ int Test1_Plugin::init(Watchman *w, int argc, char **argv)
 	_fo = _alloc->create<File>(STDOUT_FILENO);
 	_fe = _alloc->create<File>(STDERR_FILENO);
 
-	err = w->add_child(&_proc, &_buf, _fo, _fe);
+	err = w->add_child(&_proc, &_buf, _fo, _fe, NULL);
 	if (unlikely(err)) {
 		WATCHMAN_ERROR("Failed to add children to list: %d", err);
 		return err;

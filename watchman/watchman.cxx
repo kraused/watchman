@@ -11,6 +11,7 @@
 #include "child.hxx"
 #include "buffer.hxx"
 #include "file.hxx"
+#include "rotator.hxx"
 
 Watchman::Watchman(Allocator *alloc)
 : _alloc(alloc), _sfd(-1), _exit_phase(0)
@@ -131,6 +132,7 @@ int Watchman::loop()
 			_recv_and_handle_signal();
 
 		_handle_children();
+		_maybe_rotate_files();
 
 		if (0 == _num_children_left())
 			_exit_phase = WATCHMAN_EXIT_PHASE_QUIT;
@@ -399,7 +401,47 @@ int Watchman::_handle_child(int i)
 	return 0;
 }
 
-int Watchman::add_child(Child *child, Buffer *buffer, File *fo, File *fe)
+int Watchman::_maybe_rotate_files()
+{
+	int i;
+
+	for (i = 0; i < WATCHMAN_MAX_CHILDREN; ++i)
+		if (_children[i].rot) {
+			if (_children[i].fo)
+				_maybe_rotate_file(i, _children[i].fo, _children[i].rot);
+			if (_children[i].fe)
+				_maybe_rotate_file(i, _children[i].fe, _children[i].rot);
+		}
+
+	return 0;
+}
+
+int Watchman::_maybe_rotate_file(int i, File *f, Rotator *rot)
+{
+	int err;
+
+	if (!rot || !rot->file_is_supported(f) ||
+	    !rot->file_requires_rotation(f) ||
+	    unlikely(WATCHMAN_FILE_STATE_HEALTHY != f->state()) ||
+	    !rot->file_can_be_rotated(f)) {
+		return 0;
+	}
+	if (!f->is_clean()) {
+		return 0;	/* Todo log occurences to be able to see if
+				 * files are too often excluded from rotation
+				 */
+	}
+
+	err = rot->file_rotate(f);
+	if (unlikely(err)) {
+		WATCHMAN_ERROR("Failed to rotate file %p: %d", f, err);
+		return err;
+	}
+
+	return 0;
+}
+
+int Watchman::add_child(Child *child, Buffer *buffer, File *fo, File *fe, Rotator *rot)
 {
 	int i;
 
@@ -409,6 +451,7 @@ int Watchman::add_child(Child *child, Buffer *buffer, File *fo, File *fe)
 			_children[i].buffer = buffer;
 			_children[i].fo     = fo;
 			_children[i].fe     = fe;
+			_children[i].rot    = rot;
 			return 0;
 		}
 
