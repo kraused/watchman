@@ -34,7 +34,7 @@ static char **_fill_argv()
 	_argv[3] = _producer[3];
 	_argv[4] = _producer[4];
 	_argv[5] = _producer[5];
-	_argv[6] = NULL;
+	_argv[6] = nullptr;
 
 	return _argv;
 }
@@ -80,7 +80,7 @@ Test9_Program::Test9_Program()
 }
 
 Test9_Plugin::Test9_Plugin(void *handle, int version)
-: Watchman_Plugin(handle, version), _fo(NULL), _fe(NULL)
+: Watchman_Plugin(handle, version), _fo(nullptr), _fe(nullptr)
 {
 }
 

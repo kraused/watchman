@@ -39,7 +39,7 @@ static char **_fill_argv()
 	_argv[3] = _producer[3];
 	_argv[4] = _producer[4];
 	_argv[5] = _producer[5];
-	_argv[6] = NULL;
+	_argv[6] = nullptr;
 
 	return _argv;
 }
@@ -82,7 +82,7 @@ Test6_Program::Test6_Program()
 }
 
 Test6_Plugin::Test6_Plugin(void *handle, int version)
-: Watchman_Plugin(handle, version), _fo(NULL), _fe(NULL)
+: Watchman_Plugin(handle, version), _fo(nullptr), _fe(nullptr)
 {
 }
 
@@ -118,7 +118,7 @@ int Test6_Plugin::init(Watchman *w, int argc, char **argv)
 		_fe = _alloc->create<File>(STDERR_FILENO);
 	}
 
-	err = w->add_child(&_proc, &_buf, _fo, _fe, NULL);
+	err = w->add_child(&_proc, &_buf, _fo, _fe, nullptr);
 	if (unlikely(err)) {
 		WATCHMAN_ERROR("Failed to add children to list: %d", err);
 		return err;

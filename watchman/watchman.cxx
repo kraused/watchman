@@ -19,11 +19,11 @@ Watchman::Watchman(Allocator *alloc)
 	int i;
 
 	for (i = 0; i < WATCHMAN_MAX_CHILDREN; ++i) {
-		_children[i].child  = NULL;
+		_children[i].child  = nullptr;
 		_children[i].flags  = 0;
-		_children[i].buffer = NULL;
-		_children[i].fo     = NULL;
-		_children[i].fe     = NULL;
+		_children[i].buffer = nullptr;
+		_children[i].fo     = nullptr;
+		_children[i].fe     = nullptr;
 	}
 }
 
@@ -68,7 +68,7 @@ int Watchman::fini_signal_handling()
 		WATCHMAN_ERROR("close() failed with errno %d: %s", errno, strerror(errno));
 	}
 
-	err = sigprocmask(SIG_BLOCK, &_default_signal_set, NULL);
+	err = sigprocmask(SIG_BLOCK, &_default_signal_set, nullptr);
 	if (unlikely(err)) {
 		WATCHMAN_ERROR("Failed to reset default signal set");
 		return -errno;
@@ -88,7 +88,7 @@ int Watchman::execute_children()
 
 	fails = 0;
 	for (i = 0; i < WATCHMAN_MAX_CHILDREN; ++i) {
-		if (NULL == _children[i].child)
+		if (nullptr == _children[i].child)
 			continue;
 
 		err = _children[i].child->execute();
@@ -151,7 +151,7 @@ void Watchman::_fill_pollfds()
 	_pfds[0].events = POLLIN;
 
 	for (i = 0, j = 0; i < WATCHMAN_MAX_CHILDREN; ++i) {
-		if (NULL == _children[i].child)
+		if (nullptr == _children[i].child)
 			continue;
 
 		_fill_single_pollfd(&_pfds[1 + 4*j], _children[i].child->file_o(), POLLIN);
@@ -249,7 +249,7 @@ int Watchman::_num_children_left() const
 
 	n = 0;
 	for (i = 0; i < WATCHMAN_MAX_CHILDREN; ++i)
-		n += (NULL != _children[i].child);
+		n += (nullptr != _children[i].child);
 
 	return n;
 }
@@ -391,11 +391,11 @@ int Watchman::_handle_child(int i)
 			 */
 		}
 
-		_children[i].child  = NULL;
+		_children[i].child  = nullptr;
 		_children[i].flags  = 0;
-		_children[i].buffer = NULL;
-		_children[i].fo     = NULL;
-		_children[i].fe     = NULL;
+		_children[i].buffer = nullptr;
+		_children[i].fo     = nullptr;
+		_children[i].fe     = nullptr;
 	}
 
 	return 0;
@@ -446,7 +446,7 @@ int Watchman::add_child(Child *child, Buffer *buffer, File *fo, File *fe, Rotato
 	int i;
 
 	for (i = 0; i < WATCHMAN_MAX_CHILDREN; ++i)
-		if (NULL == _children[i].child) {
+		if (nullptr == _children[i].child) {
 			_children[i].child  = child;
 			_children[i].buffer = buffer;
 			_children[i].fo     = fo;

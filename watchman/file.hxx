@@ -27,7 +27,7 @@ protected:
 	int			_state;
 
 public:
-				/* Get the path of the file. Please note that NULL
+				/* Get the path of the file. Please note that nullptr
 				 * is a perfectly valid return value for unnamed files
 				 * or stdout/stderr of processes.
 				 */

@@ -33,7 +33,7 @@ static int _load_plugin(Watchman *w, Watchman_Plugin **plu, const char *plugin, 
 
 	*plu = reinterpret_cast<Watchman_Plugin_Entry>(p)(h, w);
 	if (unlikely(!(*plu))) {
-		WATCHMAN_ERROR("entry() returned NULL");
+		WATCHMAN_ERROR("entry() returned nullptr");
 		return -1;
 	}
 

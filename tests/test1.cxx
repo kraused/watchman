@@ -63,7 +63,7 @@ int Test1_Child::kill()
 }
 
 Test1_Plugin::Test1_Plugin(void *handle, int version)
-: Watchman_Plugin(handle, version), _fo(NULL), _fe(NULL)
+: Watchman_Plugin(handle, version), _fo(nullptr), _fe(nullptr)
 {
 }
 
@@ -76,7 +76,7 @@ int Test1_Plugin::init(Watchman *w, int argc, char **argv)
 	_fo = _alloc->create<File>(STDOUT_FILENO);
 	_fe = _alloc->create<File>(STDERR_FILENO);
 
-	err = w->add_child(&_proc, &_buf, _fo, _fe, NULL);
+	err = w->add_child(&_proc, &_buf, _fo, _fe, nullptr);
 	if (unlikely(err)) {
 		WATCHMAN_ERROR("Failed to add children to list: %d", err);
 		return err;

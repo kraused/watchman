@@ -11,7 +11,7 @@
 
 bool Rotator::file_is_supported(const File *f) const
 {
-	return (NULL != f->path()) && f->supports_rename() && f->supports_reopen();
+	return (nullptr != f->path()) && f->supports_rename() && f->supports_reopen();
 }
 
 bool Rotator::file_can_be_rotated(File *f)

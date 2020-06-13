@@ -17,7 +17,7 @@ Program::Program(char **argv)
 	int i, n;
 
 	for (i = 0; i < (WATCHMAN_PROGRAM_MAX_ARGC + 1); ++i)
-		_argv[i] = NULL;
+		_argv[i] = nullptr;
 
 	for (i = 0; i < _argc; ++i) {
 		_argv[i] = &_mem[i*(WATCHMAN_PROGRAM_MAX_ARGV_STRLEN + 1)];

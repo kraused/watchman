@@ -11,6 +11,6 @@ void *Libc_Allocator::alloc(long long size)
 void *Libc_Allocator::free(void *ptr)
 {
 	::free(ptr);
-	return NULL;
+	return nullptr;
 }
 

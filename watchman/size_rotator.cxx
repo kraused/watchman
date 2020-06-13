@@ -29,27 +29,27 @@ const char* Size_Rotator::transform_file_path(File *f)
 	struct timeval tv;
 	struct tm* ti;
 
-	err = gettimeofday(&tv, NULL);
+	err = gettimeofday(&tv, nullptr);
 	if (unlikely(err < 0)) {
 		WATCHMAN_ERROR("gettimeofday() failed with errno %d: %s", errno, strerror(errno));
-		return NULL;
+		return nullptr;
 	}
 	ti = localtime(&tv.tv_sec);
 	if (unlikely(!ti)) {
 		WATCHMAN_ERROR("localtime() failed");
-		return NULL;		
+		return nullptr;
 	}
 
 	err = strftime(tmp, sizeof(tmp), "%Y%m%dT%H%M%S", ti);
 	if (unlikely(0 == err)) {
 		WATCHMAN_ERROR("strftime() failed");
-		return NULL;
+		return nullptr;
 	}
 
 	err = snprintf(_newpath, WATCHMAN_PATH_MAX_LEN, "%s-%s", f->path(), tmp);
 	if (unlikely((err < 0) || (err >= WATCHMAN_PATH_MAX_LEN))) {
 		WATCHMAN_ERROR("snprintf() failed: path truncated");
-		return NULL;
+		return nullptr;
         }
 
 	return _newpath;

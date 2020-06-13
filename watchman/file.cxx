@@ -109,7 +109,7 @@ long long File::write(const void *buf, long long nbyte)
 
 const char *File::path() const
 {
-	return NULL;
+	return nullptr;
 }
 
 long long File::size() const

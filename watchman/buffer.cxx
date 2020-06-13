@@ -28,7 +28,7 @@ _Buffer_Line_Queue::_Buffer_Line_Queue()
 _Buffer_Line *_Buffer_Line_Queue::head()
 {
 	if (0 == length())
-		return NULL;
+		return nullptr;
 
 	return &_lines[_head % WATCHMAN_BUFFER_QUEUE_LEN];
 }
@@ -36,7 +36,7 @@ _Buffer_Line *_Buffer_Line_Queue::head()
 _Buffer_Line *_Buffer_Line_Queue::tail()
 {
 	if (0 == length())
-		return NULL;
+		return nullptr;
 
 	return &_lines[(_tail - 1) % WATCHMAN_BUFFER_QUEUE_LEN];
 }
@@ -87,7 +87,7 @@ long long Buffer::write_to_stderr(File *f)
 long long Buffer::_read_from(File *f, _Buffer_Line_Queue *q)
 {
 	long long n, k;
-	_Buffer_Line *line = q->tail();	/* May be NULL. */
+	_Buffer_Line *line = q->tail();	/* May be nullptr. */
 
 #if 0
 	/* FIXME With this change, test4 will succeed but we will be 
@@ -112,7 +112,7 @@ long long Buffer::_read_from(File *f, _Buffer_Line_Queue *q)
 	k = _find_last_newline(_buf, (_buf + n));
 	if (k >= 0) {
 		_copy_to_Buffer_Line(_buf, (_buf + k + 1), &line, q);
-		line = NULL;	/* Grep a new line in next call to _copy_to_Buffer_Line(). */
+		line = nullptr;	/* Grep a new line in next call to _copy_to_Buffer_Line(). */
 		_copy_to_Buffer_Line((_buf + k + 1), (_buf + n), &line, q);
 	} else {
 		_copy_to_Buffer_Line(_buf, (_buf + n), &line, q);
@@ -174,7 +174,7 @@ static void _copy_to_Buffer_Line(const char *start, const char *end, _Buffer_Lin
 	long long i;
 	const char *x;
 
-	if(NULL == (*line)) {
+	if(nullptr == (*line)) {
 		q->enqueue();
 		*line = q->tail();
 	}
