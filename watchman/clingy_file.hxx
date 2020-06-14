@@ -14,10 +14,15 @@ class Clingy_File : public File_Type
 {
 
 public:
-			/* Note: The file cannot be used before open() has been
-			 *       called.
+			/* Constructor for Named_File.
 			 */
 			explicit Clingy_File();
+
+public:
+			/* Constructor specifically for Named_Unpriv_File.
+			 * TODO Rework architecture so that this is not necessary.
+			 */
+			explicit Clingy_File(int uid, int gid);
 
 public:
 			/* Attach the instance to a filesystem mounted on the specified
@@ -53,6 +58,13 @@ template<class File_Type>
 Clingy_File<File_Type>::Clingy_File()
 {
 	_clingy_file_clean(_mountpoint, _fstype, _source);
+}
+
+template<class File_Type>
+Clingy_File<File_Type>::Clingy_File(int uid, int gid)
+: File_Type(uid, gid)
+{
+       _clingy_file_clean(_mountpoint, _fstype, _source);
 }
 
 template<class File_Type>
