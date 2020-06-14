@@ -17,7 +17,8 @@ OBJ   = main.o watchman.o plugin.o libc_alloc.o child.o program.o \
 TESTS = tests/utils.o \
         tests/test01.so tests/test02.so tests/test03.so \
         tests/test04.so tests/test05.so tests/test06.so \
-        tests/test07.so tests/test08.so tests/test09.so
+        tests/test07.so tests/test08.so tests/test09.so \
+        tests/test10.so
 
 Q = @
 
