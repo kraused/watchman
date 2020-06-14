@@ -2,7 +2,7 @@
 VERSION    = 1
 PATCHLEVEL = 0
 
-CXX      = g++
+CXX      = g++ -std=c++11
 CPPFLAGS = -I. -D_GNU_SOURCE
 CXXFLAGS = -fno-exceptions -fno-rtti -fPIC -Wall -O0 -ggdb
 LD       = g++
