@@ -49,9 +49,10 @@ tar:
 	python2 tar.py watchman $(VERSION).$(PATCHLEVEL)
 
 # Header to install
-HEADER = watchman.hxx config.hxx compiler.hxx error.hxx alloc.hxx buffer.hxx \
-         child.hxx program.hxx plugin.hxx \
-         file.hxx named_file.hxx named_clingy_file.hxx
+HEADER = alloc.hxx buffer.hxx child.hxx clingy_file.hxx compiler.hxx config.hxx \
+	 error.hxx file.hxx initfini.hxx libc_alloc.hxx named_clingy_file.hxx \
+	 named_file.hxx named_unpriv_clingy_file.hxx named_unpriv_file.hxx \
+	 plugin.hxx program.hxx rotator.hxx size_rotator.hxx watchman.hxx
 
 install:
 	install -m0755 -d $(PREFIX)/usr/sbin/
